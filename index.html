@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Sorteo</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .winner { font-size: 24px; font-weight: bold; color: green; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>¡Bienvenido al Sorteo en Vivo!</h1>
+    <p id="winnerDisplay" class="winner">Esperando el sorteo...</p>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js"></script>
+    
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
+            authDomain: "sorteo-ad02e.firebaseapp.com",
+            databaseURL: "https://sorteo-ad02e-default-rtdb.firebaseio.com/",
+            projectId: "sorteo-ad02e",
+            storageBucket: "sorteo-ad02e.appspot.com",
+            messagingSenderId: "505337439977",
+            appId: "1:505337439977:web:8691fb960b65f98ae33278"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Escuchar cambios en tiempo real
+        const winnerDisplay = document.getElementById("winnerDisplay");
+        firebase.database().ref("sorteo/winner").on("value", (snapshot) => {
+            if (snapshot.exists()) {
+                winnerDisplay.innerText = "🎉 Ganador: " + snapshot.val() + " 🎉";
+            } else {
+                winnerDisplay.innerText = "Esperando el sorteo...";
+            }
+        });
+    </script>
+</body>
+</html>
