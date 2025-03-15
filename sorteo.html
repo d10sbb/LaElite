@@ -4,13 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sorteo en Tiempo Real</title>
-    <!-- Usar type="module" para cargar Firebase con módulos -->
+    <style>
+        /* Estilos básicos */
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #admin { display: none; }
+        .winner { font-size: 24px; font-weight: bold; color: green; margin-top: 20px; }
+
+        /* Animación para el ganador */
+        @keyframes zoomIn {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Clase que aplica la animación */
+        .animate-winner {
+            animation: zoomIn 1s ease-out;
+        }
+    </style>
+    
     <script type="module">
-        // Importar las librerías necesarias desde Firebase CDN
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
         import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
         
-        // Configuración de Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
             authDomain: "sorteo-ad02e.firebaseapp.com",
@@ -22,7 +47,6 @@
             measurementId: "G-ZJP53X41YY"
         };
 
-        // Inicializar Firebase
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
@@ -43,7 +67,6 @@
                 watchWinner();
             }
 
-            // Configurar el administrador
             function setupAdmin() {
                 const userInputs = document.getElementById("userInputs");
                 userInputs.innerHTML = "";
@@ -60,12 +83,10 @@
 
             startButton.addEventListener("click", startDraw);
 
-            // Iniciar el sorteo
             function startDraw() {
                 console.log("Sorteo iniciado");
                 let participants = [];
 
-                // Obtener los datos de los participantes
                 for (let i = 0; i < 10; i++) {
                     let name = document.getElementById(`user${i}`).value.trim();
                     let percentage = parseFloat(document.getElementById(`perc${i}`).value);
@@ -84,21 +105,28 @@
                     return;
                 }
 
-                // Seleccionar un ganador aleatorio
                 let winner = participants[Math.floor(Math.random() * participants.length)];
                 console.log("Ganador seleccionado:", winner);
 
-                // Establecer el ganador en la base de datos de Firebase
                 const winnerRef = ref(db, 'sorteo/ganador');
                 set(winnerRef, winner);
             }
 
-            // Verificar el ganador desde Firebase
             function watchWinner() {
                 const winnerRef = ref(db, 'sorteo/ganador');
                 onValue(winnerRef, (snapshot) => {
                     const ganador = snapshot.val();
                     winnerDisplay.innerText = ganador ? `🎉 Ganador: ${ganador} 🎉` : "Esperando el sorteo...";
+
+                    // Aplicar animación cuando se actualiza el ganador
+                    if (ganador) {
+                        winnerDisplay.classList.add("animate-winner");
+                        
+                        // Remover la clase de animación después de que termine la animación
+                        setTimeout(() => {
+                            winnerDisplay.classList.remove("animate-winner");
+                        }, 1000);  // Duración de la animación
+                    }
                 });
             }
         });
