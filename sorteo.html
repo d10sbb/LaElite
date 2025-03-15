@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sorteo en Tiempo Real - Administrador</title>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #admin { display: none; }
+        .winner { font-size: 24px; font-weight: bold; color: green; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Sorteo en Tiempo Real - Administrador</h1>
+
+    <div id="admin">
+        <h2>Configurar Sorteo</h2>
+        <div id="userInputs"></div>
+        <button id="startButton">Iniciar Sorteo</button>
+    </div>
+
+    <div id="viewer">
+        <h2>Esperando el sorteo...</h2>
+        <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
+    </div>
+
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
+            authDomain: "sorteo-ad02e.firebaseapp.com",
+            databaseURL: "https://sorteo-ad02e-default-rtdb.firebaseio.com/",
+            projectId: "sorteo-ad02e",
+            storageBucket: "sorteo-ad02e.appspot.com",
+            messagingSenderId: "505337439977",
+            appId: "1:505337439977:web:8691fb960b65f98ae33278",
+            measurementId: "G-ZJP53X41YY"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const isAdmin = location.search.includes("admin"); // Verifica el parámetro ?admin en la URL
+            const adminDiv = document.getElementById("admin");
+            const winnerDisplay = document.getElementById("winnerDisplay");
+            const startButton = document.getElementById("startButton");
+            const viewerDiv = document.getElementById("viewer");
+
+            if (isAdmin) {
+                // Si es admin, muestra la sección de administración
+                adminDiv.style.display = "block";
+                viewerDiv.style.display = "none";
+                setupAdmin();
+            } else {
+                // Si no es admin, muestra solo la sección de visualización del ganador
+                watchWinner();
+            }
+
+            // Configuración del administrador
+            function setupAdmin() {
+                const userInputs = document.getElementById("userInputs");
+                userInputs.innerHTML = "";
+
+                // Crea campos para 10 participantes
+                for (let i = 0; i < 10; i++) {
+                    userInputs.innerHTML += `
+                        <div>
+                            <input type="text" placeholder="Nombre" id="user${i}">
+                            <input type="number" placeholder="Porcentaje" id="perc${i}" min="1" max="100">
+                        </div>
+                    `;
+                }
+
+                startButton.addEventListener("click", startDraw);
+            }
+
+            function startDraw() {
+                let participants = [];
+                
+                // Recoger los participantes y sus porcentajes
+                for (let i = 0; i < 10; i++) {
+                    let name = document.getElementById(`user${i}`).value.trim();
+                    let percentage = parseFloat(document.getElementById(`perc${i}`).value);
+
+                    if (name && !isNaN(percentage) && percentage > 0) {
+                        // Agregar nombre a la lista de participantes según su porcentaje
+                        for (let j = 0; j < percentage; j++) {
+                            participants.push(name);
+                        }
+                    }
+                }
+
+                if (participants.length === 0) {
+                    alert("Ingresa datos válidos en los campos.");
+                    return;
+                }
+
+                // Seleccionar un ganador aleatorio
+                let winner = participants[Math.floor(Math.random() * participants.length)];
+
+                // Guardar el ganador en la base de datos
+                db.ref("sorteo/ganador").set(winner);
+            }
+
+            // Escuchar el cambio de ganador en Firebase
+            function watchWinner() {
+                db.ref("sorteo/ganador").on("value", (snapshot) => {
+                    const ganador = snapshot.val();
+                    winnerDisplay.innerText = ganador ? `🎉 Ganador: ${ganador} 🎉` : "Esperando el sorteo...";
+                });
+            }
+        });
+    </script>
+</body>
+</html>
