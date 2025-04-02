@@ -6,22 +6,18 @@
     <title>Sorteo en Tiempo Real</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
-        #admin, #viewer { display: none; }
+        #admin, #viewer, #authSection { display: none; }
         .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; }
         .countdown { font-size: 28px; color: red; font-weight: bold; margin-top: 15px; }
         .participant-list { margin-top: 18px; font-size: 18px; display: none; }
-        @keyframes zoomIn {
-            0% { transform: scale(0); opacity: 0; }
-            50% { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(1); opacity: 1; }
-        }
+        @keyframes zoomIn { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
         .animate-winner { animation: zoomIn 1s ease-out; }
     </style>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
         import { getDatabase, ref, set, onValue, remove, get } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
-        import { getAuth, signInWithPopup, signInWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
@@ -39,36 +35,36 @@
         const auth = getAuth();
 
         document.addEventListener("DOMContentLoaded", function () {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAdminPage = urlParams.has("admin");
+
+            const authSection = document.getElementById("authSection");
             const adminDiv = document.getElementById("admin");
             const viewerDiv = document.getElementById("viewer");
-            const loginSection = document.getElementById("authSection");
-            const winnerDisplay = document.getElementById("winnerDisplay");
-            const participantList = document.getElementById("participantList");
-            const countdownDisplay = document.getElementById("countdown");
 
-            // 🔹 Comprobar autenticación
-            onAuthStateChanged(auth, (user) => {
-                if (user) {
-                    loginSection.style.display = "none";
-                    adminDiv.style.display = "block";
-                    viewerDiv.style.display = "none";
-                    setupAdmin();
-                } else {
-                    loginSection.style.display = "block";
-                    adminDiv.style.display = "none";
-                    viewerDiv.style.display = "block";
-                    watchWinner();
-                    watchCountdown();
-                    watchParticipants();
-                }
-            });
+            // 🛑 Si está en `?admin`, verificar autenticación
+            if (isAdminPage) {
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        authSection.style.display = "none";
+                        adminDiv.style.display = "block";
+                        setupAdmin();
+                    } else {
+                        authSection.style.display = "block";
+                    }
+                });
+            } else {
+                // 🔹 Si NO está en `?admin`, mostrar el sorteo sin login
+                viewerDiv.style.display = "block";
+                watchWinner();
+                watchCountdown();
+                watchParticipants();
+            }
 
             // 🔹 Iniciar sesión con Google
             document.getElementById("loginGoogle").addEventListener("click", () => {
                 const provider = new GoogleAuthProvider();
-                signInWithPopup(auth, provider).catch((error) => {
-                    alert("Error en autenticación: " + error.message);
-                });
+                signInWithPopup(auth, provider).catch((error) => alert("Error: " + error.message));
             });
 
             // 🔹 Iniciar sesión con correo/contraseña
@@ -76,25 +72,19 @@
                 e.preventDefault();
                 const email = document.getElementById("email").value;
                 const password = document.getElementById("password").value;
-                signInWithEmailAndPassword(auth, email, password).catch((error) => {
-                    alert("Error en inicio de sesión: " + error.message);
-                });
+                signInWithEmailAndPassword(auth, email, password).catch((error) => alert("Error: " + error.message));
             });
 
             // 🔹 Cerrar sesión
             document.getElementById("logoutButton").addEventListener("click", () => {
-                signOut(auth);
+                signOut(auth).then(() => location.reload());
             });
 
-            // 🔹 Configuración del sorteo
             function setupAdmin() {
-                const userInputs = document.getElementById("userInputs");
-                userInputs.innerHTML = `<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>`;
-
+                document.getElementById("userInputs").innerHTML = `<label>Cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>`;
                 for (let i = 0; i < 10; i++) {
-                    userInputs.innerHTML += `<div><input type='text' placeholder='Nombre' id='user${i}'> <input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>`;
+                    document.getElementById("userInputs").innerHTML += `<div><input type='text' placeholder='Nombre' id='user${i}'> <input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>`;
                 }
-
                 document.getElementById("startButton").addEventListener("click", startCountdown);
                 document.getElementById("resetButton").addEventListener("click", resetDraw);
             }
@@ -123,34 +113,31 @@
                     let name = document.getElementById(`user${i}`).value.trim();
                     let percentage = parseFloat(document.getElementById(`perc${i}`).value);
                     if (name && !isNaN(percentage) && percentage > 0) {
-                        for (let j = 0; j < percentage; j++) {
-                            participants.push(name);
-                        }
+                        for (let j = 0; j < percentage; j++) participants.push(name);
                     }
                 }
                 if (participants.length === 0) {
                     alert("Ingresa datos válidos.");
                     return;
                 }
-                let winner = participants[Math.floor(Math.random() * participants.length)];
-                set(ref(db, "sorteo/ganador"), winner);
+                set(ref(db, "sorteo/ganador"), participants[Math.floor(Math.random() * participants.length)]);
             }
 
             function watchWinner() {
                 onValue(ref(db, "sorteo/ganador"), (snapshot) => {
-                    const ganador = snapshot.val();
-                    winnerDisplay.innerText = ganador ? `\n\n🎉 Ganador: ${ganador} 🎉` : "Esperando el sorteo...";
+                    document.getElementById("winnerDisplay").innerText = snapshot.val() ? `\n\n🎉 Ganador: ${snapshot.val()} 🎉` : "Esperando el sorteo...";
                 });
             }
 
             function watchCountdown() {
                 onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-                    countdownDisplay.innerText = `⏳ Tiempo restante: ${snapshot.val()} s`;
+                    document.getElementById("countdown").innerText = `⏳ Tiempo restante: ${snapshot.val()} s`;
                 });
             }
 
             function watchParticipants() {
                 onValue(ref(db, "sorteo/participants"), (snapshot) => {
+                    const participantList = document.getElementById("participantList");
                     participantList.innerHTML = "<h3>Participantes:</h3>";
                     snapshot.val()?.forEach(p => participantList.innerHTML += `<p>${p.name} - ${p.percentage}%</p>`);
                 });
@@ -165,8 +152,8 @@
     </script>
 </head>
 <body>
-    <div id="authSection"><h2>Iniciar sesión</h2><form id="loginForm"><input type="email" id="email"><input type="password" id="password"><button type="submit">Iniciar sesión</button></form><button id="loginGoogle">Iniciar con Google</button></div>
+    <div id="authSection"><h2>Iniciar sesión</h2><form id="loginForm"><input type="email" id="email"><input type="password" id="password"><button type="submit">Entrar</button></form><button id="loginGoogle">Google</button></div>
     <div id="admin"><h2>Configurar Sorteo</h2><div id="userInputs"></div><button id="startButton">Iniciar</button><button id="resetButton">Borrar</button><button id="logoutButton">Salir</button></div>
-    <div id="viewer"><h2>★ Sorteo ★</h2><p id="countdown">⏳ -- s</p><div id="participantList"></div><p id="winnerDisplay">Aquí aparecerá el ganador</p></div>
+    <div id="viewer"><h2> ~ ★ La Élite ★ ~ </h2><p id="countdown">⏳ -- s</p><div id="participantList"></div><p id="winnerDisplay">Aquí aparecerá el ganador</p></div>
 </body>
 </html>
