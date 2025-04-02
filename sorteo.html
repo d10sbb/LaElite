@@ -94,6 +94,20 @@
             startButton.addEventListener("click", startCountdown);
             resetButton.addEventListener("click", resetDraw);
 
+            function resetDraw() {
+                // Elimina los datos de Firebase
+                remove(ref(db, "sorteo/ganador"));
+                remove(ref(db, "sorteo/participants"));
+                remove(ref(db, "sorteo/countdown"));
+    
+                // Restablece la UI a su estado inicial
+                winnerDisplay.innerText = "Aquí aparecerá el ganador";
+                countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
+                participantList.innerHTML = "";
+                participantList.style.display = "none";
+            }
+
+
             function startCountdown() {
                 let timeLeft = parseInt(document.getElementById("countdownInput").value);
                 if (isNaN(timeLeft) || timeLeft <= 0) {
