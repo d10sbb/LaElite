@@ -150,7 +150,7 @@
 
             function watchWinner() {
                 onValue(ref(db, "sorteo/ganador"), (snapshot) => {
-                    winnerDisplay.innerText = snapshot.val() ? `🎉 Ganador: ${snapshot.val()} 🎉` : "Esperando el sorteo...";
+                    winnerDisplay.innerText = snapshot.val() ? `\n\n🎉 Ganador: ${snapshot.val()} 🎉` : "Esperando el sorteo...";
                 });
             }
 
