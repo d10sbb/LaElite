@@ -94,33 +94,62 @@
             startButton.addEventListener("click", startCountdown);
             resetButton.addEventListener("click", resetDraw);
 
+            function startCountdown() {
+                let timeLeft = parseInt(document.getElementById("countdownInput").value);
+                if (isNaN(timeLeft) || timeLeft <= 0) {
+                    alert("Introduce un tiempo válido para la cuenta atrás.");
+                    return;
+                }
+                set(ref(db, "sorteo/countdown"), timeLeft);
+                countdownTimer = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        set(ref(db, "sorteo/countdown"), timeLeft);
+                    } else {
+                        clearInterval(countdownTimer);
+                        startDraw();
+                    }
+                }, 1000);
+            }
+
+            function startDraw() {
+                let participants = [];
+                let participantInfo = [];
+                for (let i = 0; i < 10; i++) {
+                    let name = document.getElementById(`user${i}`).value.trim();
+                    let percentage = parseFloat(document.getElementById(`perc${i}`).value);
+                    if (name && !isNaN(percentage) && percentage > 0) {
+                        participantInfo.push({ name, percentage });
+                        for (let j = 0; j < percentage; j++) {
+                            participants.push(name);
+                        }
+                    }
+                }
+                if (participants.length === 0) {
+                    alert("Ingresa datos válidos en los campos.");
+                    return;
+                }
+                set(ref(db, "sorteo/participants"), participantInfo);
+                let winner = participants[Math.floor(Math.random() * participants.length)];
+                set(ref(db, "sorteo/ganador"), winner);
+            }
+
             function watchWinner() {
                 onValue(ref(db, "sorteo/ganador"), (snapshot) => {
-                    const ganador = snapshot.val();
-                    winnerDisplay.innerText = ganador ? `\n\n🎉 Ganador: ${ganador} 🎉` : "Esperando el sorteo...";
-                    if (ganador) {
-                        winnerDisplay.classList.add("animate-winner");
-                        setTimeout(() => winnerDisplay.classList.remove("animate-winner"), 1000);
-                    }
+                    winnerDisplay.innerText = snapshot.val() ? `🎉 Ganador: ${snapshot.val()} 🎉` : "Esperando el sorteo...";
                 });
             }
 
             function watchCountdown() {
                 onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-                    const timeLeft = snapshot.val();
-                    countdownDisplay.innerText = timeLeft !== null ? `⏳ Tiempo restante: ${timeLeft} s` : "⏳ Tiempo restante: -- s";
+                    countdownDisplay.innerText = snapshot.val() ? `⏳ Tiempo restante: ${snapshot.val()} s` : "⏳ Tiempo restante: -- s";
                 });
             }
 
             function watchParticipants() {
                 onValue(ref(db, "sorteo/participants"), (snapshot) => {
-                    if (snapshot.exists()) {
-                        participantList.style.display = "block";
-                        participantList.innerHTML = "<h3>Participantes:</h3>";
-                        snapshot.val().forEach(p => {
-                            participantList.innerHTML += `<p>${p.name} - ${p.percentage}%</p>`;
-                        });
-                    }
+                    participantList.innerHTML = snapshot.exists() ? snapshot.val().map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('') : "";
+                    participantList.style.display = snapshot.exists() ? "block" : "none";
                 });
             }
         });
