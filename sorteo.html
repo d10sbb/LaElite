@@ -6,18 +6,23 @@
     <title>Sorteo en Tiempo Real</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
-        #admin, #viewer, #authSection { display: none; }
+        #admin { display: none; }
         .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; }
         .countdown { font-size: 28px; color: red; font-weight: bold; margin-top: 15px; }
         .participant-list { margin-top: 18px; font-size: 18px; display: none; }
-        @keyframes zoomIn { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
-        .animate-winner { animation: zoomIn 1s ease-out; }
+        @keyframes zoomIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-winner {
+            animation: zoomIn 1s ease-out;
+        }
     </style>
-
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
         import { getDatabase, ref, set, onValue, remove, get } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
-        import { getAuth, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
@@ -26,120 +31,103 @@
             projectId: "sorteo-ad02e",
             storageBucket: "sorteo-ad02e.appspot.com",
             messagingSenderId: "505337439977",
-            appId: "1:505337439977:web:8691fb960b65f98ae33278",
-            measurementId: "G-ZJP53X41YY"
+            appId: "1:505337439977:web:8691fb960b65f98ae33278"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const auth = getAuth();
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
 
         document.addEventListener("DOMContentLoaded", function () {
-            const urlParams = new URLSearchParams(window.location.search);
-            const isAdminPage = urlParams.has("admin");
-
-            const authSection = document.getElementById("authSection");
+            const isAdmin = location.search.includes("admin");
             const adminDiv = document.getElementById("admin");
             const viewerDiv = document.getElementById("viewer");
+            const winnerDisplay = document.getElementById("winnerDisplay");
+            const participantList = document.getElementById("participantList");
+            const startButton = document.getElementById("startButton");
+            const resetButton = document.getElementById("resetButton");
+            const countdownDisplay = document.getElementById("countdown");
 
-            // 🛑 Si está en `?admin`, verificar autenticación
-            if (isAdminPage) {
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        authSection.style.display = "none";
-                        adminDiv.style.display = "block";
-                        setupAdmin();
-                    } else {
-                        authSection.style.display = "block";
-                    }
+            if (isAdmin) {
+                signInWithPopup(auth, provider).then((result) => {
+                    adminDiv.style.display = "block";
+                    viewerDiv.style.display = "none";
+                    setupAdmin();
+                }).catch((error) => {
+                    alert("Autenticación fallida: " + error.message);
                 });
             } else {
-                // 🔹 Si NO está en `?admin`, mostrar el sorteo sin login
-                viewerDiv.style.display = "block";
                 watchWinner();
                 watchCountdown();
                 watchParticipants();
             }
 
-            // 🔹 Iniciar sesión con Google
-            document.getElementById("loginGoogle").addEventListener("click", () => {
-                const provider = new GoogleAuthProvider();
-                signInWithPopup(auth, provider).catch((error) => alert("Error: " + error.message));
-            });
-
-            // 🔹 Iniciar sesión con correo/contraseña
-            document.getElementById("loginForm").addEventListener("submit", (e) => {
-                e.preventDefault();
-                const email = document.getElementById("email").value;
-                const password = document.getElementById("password").value;
-                signInWithEmailAndPassword(auth, email, password).catch((error) => alert("Error: " + error.message));
-            });
-
-            // 🔹 Cerrar sesión
-            document.getElementById("logoutButton").addEventListener("click", () => {
-                signOut(auth).then(() => location.reload());
-            });
-
             function setupAdmin() {
-                document.getElementById("userInputs").innerHTML = `<label>Cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>`;
+                const userInputs = document.getElementById("userInputs");
+                userInputs.innerHTML = "";
                 for (let i = 0; i < 10; i++) {
-                    document.getElementById("userInputs").innerHTML += `<div><input type='text' placeholder='Nombre' id='user${i}'> <input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>`;
+                    userInputs.innerHTML += `
+                        <div>
+                            <input type='text' placeholder='Nombre' id='user${i}'>
+                            <input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'>
+                        </div>
+                    `;
                 }
-                document.getElementById("startButton").addEventListener("click", startCountdown);
-                document.getElementById("resetButton").addEventListener("click", resetDraw);
             }
 
-            function startCountdown() {
-                let timeLeft = parseInt(document.getElementById("countdownInput").value);
-                if (isNaN(timeLeft) || timeLeft <= 0) {
-                    alert("Introduce un tiempo válido.");
-                    return;
-                }
-                set(ref(db, "sorteo/countdown"), timeLeft);
-                let countdownTimer = setInterval(() => {
-                    if (timeLeft > 0) {
-                        timeLeft--;
-                        set(ref(db, "sorteo/countdown"), timeLeft);
-                    } else {
-                        clearInterval(countdownTimer);
-                        startDraw();
-                    }
-                }, 1000);
-            }
+            startButton.addEventListener("click", startDraw);
+            resetButton.addEventListener("click", resetDraw);
 
             function startDraw() {
                 let participants = [];
+                let participantInfo = [];
                 for (let i = 0; i < 10; i++) {
                     let name = document.getElementById(`user${i}`).value.trim();
                     let percentage = parseFloat(document.getElementById(`perc${i}`).value);
                     if (name && !isNaN(percentage) && percentage > 0) {
-                        for (let j = 0; j < percentage; j++) participants.push(name);
+                        participantInfo.push({ name, percentage });
+                        for (let j = 0; j < percentage; j++) {
+                            participants.push(name);
+                        }
                     }
                 }
                 if (participants.length === 0) {
-                    alert("Ingresa datos válidos.");
+                    alert("Ingresa datos válidos en los campos.");
                     return;
                 }
-                set(ref(db, "sorteo/ganador"), participants[Math.floor(Math.random() * participants.length)]);
+                set(ref(db, "sorteo/participants"), participantInfo);
+                let winner = participants[Math.floor(Math.random() * participants.length)];
+                set(ref(db, "sorteo/ganador"), winner);
             }
 
             function watchWinner() {
                 onValue(ref(db, "sorteo/ganador"), (snapshot) => {
-                    document.getElementById("winnerDisplay").innerText = snapshot.val() ? `\n\n🎉 Ganador: ${snapshot.val()} 🎉` : "Esperando el sorteo...";
+                    const ganador = snapshot.val();
+                    winnerDisplay.innerText = ganador ? `\n\n🎉 Ganador: ${ganador} 🎉` : "Esperando el sorteo...";
+                    if (ganador) {
+                        winnerDisplay.classList.add("animate-winner");
+                        setTimeout(() => winnerDisplay.classList.remove("animate-winner"), 1000);
+                    }
                 });
             }
 
             function watchCountdown() {
                 onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-                    document.getElementById("countdown").innerText = `⏳ Tiempo restante: ${snapshot.val()} s`;
+                    const timeLeft = snapshot.val();
+                    countdownDisplay.innerText = timeLeft !== null ? `⏳ Tiempo restante: ${timeLeft} s` : "⏳ Tiempo restante: -- s";
                 });
             }
 
             function watchParticipants() {
                 onValue(ref(db, "sorteo/participants"), (snapshot) => {
-                    const participantList = document.getElementById("participantList");
                     participantList.innerHTML = "<h3>Participantes:</h3>";
-                    snapshot.val()?.forEach(p => participantList.innerHTML += `<p>${p.name} - ${p.percentage}%</p>`);
+                    if (snapshot.exists()) {
+                        participantList.style.display = "block";
+                        snapshot.val().forEach(p => {
+                            participantList.innerHTML += `<p>${p.name} - ${p.percentage}%</p>`;
+                        });
+                    }
                 });
             }
 
@@ -147,13 +135,27 @@
                 remove(ref(db, "sorteo/ganador"));
                 remove(ref(db, "sorteo/participants"));
                 remove(ref(db, "sorteo/countdown"));
+                winnerDisplay.innerText = "Aquí aparecerá el ganador";
+                countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
+                participantList.innerHTML = "";
+                participantList.style.display = "none";
             }
         });
     </script>
 </head>
 <body>
-    <div id="authSection"><h2>Iniciar sesión</h2><form id="loginForm"><input type="email" id="email"><input type="password" id="password"><button type="submit">Entrar</button></form><button id="loginGoogle">Google</button></div>
-    <div id="admin"><h2>Configurar Sorteo</h2><div id="userInputs"></div><button id="startButton">Iniciar</button><button id="resetButton">Borrar</button><button id="logoutButton">Salir</button></div>
-    <div id="viewer"><h2> ~ ★ La Élite ★ ~ </h2><p id="countdown">⏳ -- s</p><div id="participantList"></div><p id="winnerDisplay">Aquí aparecerá el ganador</p></div>
+    <h1>Sorteo del Trofeo por Ranking Mensual de Clanes en BoomBang.TV</h1>
+    <div id="admin">
+        <h2>Configurar Sorteo</h2>
+        <div id="userInputs"></div>
+        <button id="startButton">Iniciar Sorteo</button>
+        <button id="resetButton">Borrar Sorteo</button>
+    </div>
+    <div id="viewer">
+        <h2> ~ ★ Clan La Élite ★ ~ </h2>
+        <p id="countdown" class="countdown">⏳ Tiempo restante: -- s</p>
+        <div id="participantList" class="participant-list"></div>
+        <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
+    </div>
 </body>
 </html>
