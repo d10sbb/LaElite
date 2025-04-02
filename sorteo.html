@@ -6,22 +6,25 @@
     <title>Sorteo en Tiempo Real</title>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
-        #admin { display: none; }
+        #admin, #loginContainer { display: none; }
         .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; }
         .countdown { font-size: 28px; color: red; font-weight: bold; margin-top: 15px; }
         .participant-list { margin-top: 18px; font-size: 18px; display: none; }
+
         @keyframes zoomIn {
             0% { transform: scale(0); opacity: 0; }
             50% { transform: scale(1.1); opacity: 1; }
             100% { transform: scale(1); opacity: 1; }
         }
+
         .animate-winner {
             animation: zoomIn 1s ease-out;
         }
     </style>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
         import { getDatabase, ref, set, onValue, remove, get } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
         const firebaseConfig = {
@@ -31,31 +34,35 @@
             projectId: "sorteo-ad02e",
             storageBucket: "sorteo-ad02e.appspot.com",
             messagingSenderId: "505337439977",
-            appId: "1:505337439977:web:8691fb960b65f98ae33278"
+            appId: "1:505337439977:web:8691fb960b65f98ae33278",
+            measurementId: "G-ZJP53X41YY"
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
         const db = getDatabase(app);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
 
         document.addEventListener("DOMContentLoaded", function () {
             const isAdmin = location.search.includes("admin");
             const adminDiv = document.getElementById("admin");
+            const loginContainer = document.getElementById("loginContainer");
             const viewerDiv = document.getElementById("viewer");
             const winnerDisplay = document.getElementById("winnerDisplay");
             const participantList = document.getElementById("participantList");
+            const countdownDisplay = document.getElementById("countdown");
             const startButton = document.getElementById("startButton");
             const resetButton = document.getElementById("resetButton");
-            const countdownDisplay = document.getElementById("countdown");
+            let countdownTimer;
 
             if (isAdmin) {
-                signInWithPopup(auth, provider).then((result) => {
-                    adminDiv.style.display = "block";
-                    viewerDiv.style.display = "none";
-                    setupAdmin();
-                }).catch((error) => {
-                    alert("Autenticación fallida: " + error.message);
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        adminDiv.style.display = "block";
+                        loginContainer.style.display = "none";
+                        setupAdmin();
+                    } else {
+                        loginContainer.style.display = "block";
+                    }
                 });
             } else {
                 watchWinner();
@@ -65,19 +72,32 @@
 
             function setupAdmin() {
                 const userInputs = document.getElementById("userInputs");
-                userInputs.innerHTML = "";
+                userInputs.innerHTML = `<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>`;
                 for (let i = 0; i < 10; i++) {
-                    userInputs.innerHTML += `
-                        <div>
-                            <input type='text' placeholder='Nombre' id='user${i}'>
-                            <input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'>
-                        </div>
-                    `;
+                    userInputs.innerHTML += `<div><input type='text' placeholder='Nombre' id='user${i}'><input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>`;
                 }
             }
 
-            startButton.addEventListener("click", startDraw);
+            startButton.addEventListener("click", startCountdown);
             resetButton.addEventListener("click", resetDraw);
+
+            function startCountdown() {
+                let timeLeft = parseInt(document.getElementById("countdownInput").value);
+                if (isNaN(timeLeft) || timeLeft <= 0) {
+                    alert("Introduce un tiempo válido para la cuenta atrás.");
+                    return;
+                }
+                set(ref(db, "sorteo/countdown"), timeLeft);
+                countdownTimer = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        set(ref(db, "sorteo/countdown"), timeLeft);
+                    } else {
+                        clearInterval(countdownTimer);
+                        startDraw();
+                    }
+                }, 1000);
+            }
 
             function startDraw() {
                 let participants = [];
@@ -105,10 +125,6 @@
                 onValue(ref(db, "sorteo/ganador"), (snapshot) => {
                     const ganador = snapshot.val();
                     winnerDisplay.innerText = ganador ? `\n\n🎉 Ganador: ${ganador} 🎉` : "Esperando el sorteo...";
-                    if (ganador) {
-                        winnerDisplay.classList.add("animate-winner");
-                        setTimeout(() => winnerDisplay.classList.remove("animate-winner"), 1000);
-                    }
                 });
             }
 
@@ -122,12 +138,9 @@
             function watchParticipants() {
                 onValue(ref(db, "sorteo/participants"), (snapshot) => {
                     participantList.innerHTML = "<h3>Participantes:</h3>";
-                    if (snapshot.exists()) {
-                        participantList.style.display = "block";
-                        snapshot.val().forEach(p => {
-                            participantList.innerHTML += `<p>${p.name} - ${p.percentage}%</p>`;
-                        });
-                    }
+                    snapshot.val()?.forEach(p => {
+                        participantList.innerHTML += `<p>${p.name} - ${p.percentage}%</p>`;
+                    });
                 });
             }
 
@@ -138,13 +151,18 @@
                 winnerDisplay.innerText = "Aquí aparecerá el ganador";
                 countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
                 participantList.innerHTML = "";
-                participantList.style.display = "none";
             }
         });
     </script>
 </head>
 <body>
     <h1>Sorteo del Trofeo por Ranking Mensual de Clanes en BoomBang.TV</h1>
+    <div id="loginContainer">
+        <h2>Iniciar Sesión</h2>
+        <input type="email" id="email" placeholder="Correo electrónico">
+        <input type="password" id="password" placeholder="Contraseña">
+        <button onclick="login()">Iniciar Sesión</button>
+    </div>
     <div id="admin">
         <h2>Configurar Sorteo</h2>
         <div id="userInputs"></div>
