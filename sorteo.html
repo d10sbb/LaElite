@@ -38,6 +38,7 @@
             const isAdmin = location.search.includes("admin");
             const adminDiv = document.getElementById("admin");
             const loginContainer = document.getElementById("loginContainer");
+            const userInputs = document.getElementById("userInputs");
             const winnerDisplay = document.getElementById("winnerDisplay");
             const startButton = document.getElementById("startButton");
             const resetButton = document.getElementById("resetButton");
@@ -50,6 +51,7 @@
                     if (user) {
                         adminDiv.style.display = "block";
                         loginContainer.style.display = "none";
+                        setupAdminFields();
                     } else {
                         loginContainer.style.display = "block";
                     }
@@ -57,6 +59,13 @@
             } else {
                 adminDiv.style.display = "none";
                 loginContainer.style.display = "none";
+            }
+
+            function setupAdminFields() {
+                userInputs.innerHTML = "";
+                for (let i = 0; i < 10; i++) {
+                    userInputs.innerHTML += `<div><input type='text' placeholder='Nombre' id='user${i}'> <input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>`;
+                }
             }
 
             startButton.addEventListener("click", startDraw);
@@ -71,8 +80,8 @@
             function startDraw() {
                 participants = [];
                 for (let i = 0; i < 10; i++) {
-                    let name = document.getElementById(`user${i}`)?.value.trim();
-                    let percentage = parseFloat(document.getElementById(`perc${i}`)?.value);
+                    let name = document.getElementById(`user${i}`).value.trim();
+                    let percentage = parseFloat(document.getElementById(`perc${i}`).value);
                     if (name && !isNaN(percentage) && percentage > 0) {
                         for (let j = 0; j < percentage; j++) {
                             participants.push(name);
@@ -87,7 +96,7 @@
                 setTimeout(() => {
                     let winner = participants[Math.floor(Math.random() * participants.length)];
                     set(ref(db, "sorteo/ganador"), winner);
-                    <br><br>winnerDisplay.innerText = `🎉 Ganador: ${winner} 🎉`;
+                    winnerDisplay.innerText = `🎉 Ganador: ${winner} 🎉`;
                 }, 5000);
             }
 
