@@ -164,7 +164,7 @@
 
             function watchCountdown() {
                 onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-                    countdownDisplay.innerText = snapshot.val() ? `⏳ Tiempo restante: ${snapshot.val()} s` : "⏳ Tiempo restante: -- s";
+                    countdownDisplay.innerText = snapshot.val() ? `\n⏳ Tiempo restante: ${snapshot.val()} s` : "\n⏳ Tiempo restante: -- s";
                 });
             }
 
@@ -194,7 +194,7 @@
     </div>
     <div id="viewer">
         <h2> ~ ★ Clan La Élite ★ ~ </h2>
-        <p id="countdown" class="countdown">⏳ Tiempo restante: -- s</p>
+        <p id="countdown" class="countdown">\n⏳ Tiempo restante: -- s</p>
         <div id="participantList" class="participant-list"></div>
         <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
     </div>
