@@ -14,11 +14,11 @@
         canvas { border: 2px solid black; }
     </style>
 
-    <script type="module">
+        <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
         import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
-
+    
         const firebaseConfig = {
             apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
             authDomain: "sorteo-ad02e.firebaseapp.com",
@@ -29,54 +29,58 @@
             appId: "1:505337439977:web:8691fb960b65f98ae33278",
             measurementId: "G-ZJP53X41YY"
         };
-
+    
         const app = initializeApp(firebaseConfig);
         const auth = getAuth();
         const db = getDatabase(app);
-
+    
         document.addEventListener("DOMContentLoaded", function () {
             const isAdmin = location.search.includes("admin");
             const adminDiv = document.getElementById("admin");
             const loginContainer = document.getElementById("loginContainer");
+            const viewerDiv = document.getElementById("viewer");
             const userInputs = document.getElementById("userInputs");
             const winnerDisplay = document.getElementById("winnerDisplay");
             const startButton = document.getElementById("startButton");
             const resetButton = document.getElementById("resetButton");
             const canvas = document.getElementById("wheelCanvas");
             const ctx = canvas.getContext("2d");
+            const countdownDisplay = document.getElementById("countdown");
             let participants = [];
-
+    
             if (isAdmin) {
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         adminDiv.style.display = "block";
                         loginContainer.style.display = "none";
+                        viewerDiv.style.display = "block";
                         setupAdminFields();
                     } else {
                         loginContainer.style.display = "block";
+                        viewerDiv.style.display = "none";
                     }
                 });
             } else {
-                adminDiv.style.display = "none";
                 loginContainer.style.display = "none";
+                viewerDiv.style.display = "block";
             }
-
+    
             function setupAdminFields() {
                 userInputs.innerHTML = "";
                 for (let i = 0; i < 10; i++) {
                     userInputs.innerHTML += `<div><input type='text' placeholder='Nombre' id='user${i}'> <input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>`;
                 }
             }
-
-            startButton.addEventListener("click", startDraw);
-            resetButton.addEventListener("click", resetDraw);
-
+    
+            startButton?.addEventListener("click", startDraw);
+            resetButton?.addEventListener("click", resetDraw);
+    
             function resetDraw() {
                 remove(ref(db, "sorteo/ganador"));
                 winnerDisplay.innerText = "Aquí aparecerá el ganador";
                 drawWheel([]);
             }
-
+    
             function startDraw() {
                 participants = [];
                 for (let i = 0; i < 10; i++) {
@@ -99,7 +103,7 @@
                     winnerDisplay.innerText = `🎉 Ganador: ${winner} 🎉`;
                 }, 5000);
             }
-
+    
             function drawWheel(names) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 if (names.length === 0) return;
@@ -118,8 +122,24 @@
                     ctx.closePath();
                 });
             }
+    
+            // ✅ DEFINIR LOGIN Y LOGOUT PARA QUE FUNCIONEN LOS BOTONES
+            window.login = function () {
+                const email = document.getElementById("email").value;
+                const password = document.getElementById("password").value;
+                signInWithEmailAndPassword(auth, email, password)
+                    .then(() => location.reload())
+                    .catch((error) => alert("Error al iniciar sesión: " + error.message));
+            };
+    
+            window.logout = function () {
+                auth.signOut()
+                    .then(() => location.reload())
+                    .catch((error) => alert("Error al cerrar sesión: " + error.message));
+            };
         });
     </script>
+    
 </head>
 <body>
     <h1>Sorteo del trofeo del Ranking Mensual de Clanes - BoomBang.TV</h1>
