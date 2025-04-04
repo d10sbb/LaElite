@@ -26,7 +26,7 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
         import { getDatabase, ref, set, onValue, remove, get } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
-
+        
         const firebaseConfig = {
             apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
             authDomain: "sorteo-ad02e.firebaseapp.com",
@@ -41,7 +41,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth();
         const db = getDatabase(app);
-
+        
         document.addEventListener("DOMContentLoaded", function () {
             const isAdmin = location.search.includes("admin");
             const adminDiv = document.getElementById("admin");
@@ -69,7 +69,7 @@
                 watchCountdown();
                 watchParticipants();
             }
-
+            
             window.login = function () {
                 const email = document.getElementById("email").value;
                 const password = document.getElementById("password").value;
@@ -81,6 +81,14 @@
                     .catch((error) => {
                         alert("Error en la autenticación: " + error.message);
                     });
+            };
+
+            window.logout = function () {
+                auth.signOut().then(() => {
+                    location.reload(); // Recarga la página para volver a la pantalla de login
+                }).catch((error) => {
+                    alert("Error al cerrar sesión: " + error.message);
+                });
             };
 
             function setupAdmin() {
@@ -125,7 +133,7 @@
                     }
                 }, 1000);
             }
-
+    
             function startDraw() {
                 let participants = [];
                 let participantInfo = [];
@@ -179,6 +187,7 @@
     </div>
     <div id="admin">
         <h2>Configurar Sorteo</h2>
+        <button onclick="logout()">Cerrar Sesión</button>
         <div id="userInputs"></div>
         <button id="startButton">Iniciar Sorteo</button>
         <button id="resetButton">Borrar Sorteo</button>
