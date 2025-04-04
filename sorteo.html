@@ -39,7 +39,6 @@
             const adminDiv = document.getElementById("admin");
             const loginContainer = document.getElementById("loginContainer");
             const winnerDisplay = document.getElementById("winnerDisplay");
-            const countdownDisplay = document.getElementById("countdown");
             const startButton = document.getElementById("startButton");
             const resetButton = document.getElementById("resetButton");
             const canvas = document.getElementById("wheelCanvas");
@@ -55,6 +54,9 @@
                         loginContainer.style.display = "block";
                     }
                 });
+            } else {
+                adminDiv.style.display = "none";
+                loginContainer.style.display = "none";
             }
 
             startButton.addEventListener("click", startDraw);
@@ -69,8 +71,8 @@
             function startDraw() {
                 participants = [];
                 for (let i = 0; i < 10; i++) {
-                    let name = document.getElementById(`user${i}`).value.trim();
-                    let percentage = parseFloat(document.getElementById(`perc${i}`).value);
+                    let name = document.getElementById(`user${i}`)?.value.trim();
+                    let percentage = parseFloat(document.getElementById(`perc${i}`)?.value);
                     if (name && !isNaN(percentage) && percentage > 0) {
                         for (let j = 0; j < percentage; j++) {
                             participants.push(name);
@@ -91,6 +93,7 @@
 
             function drawWheel(names) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if (names.length === 0) return;
                 let total = names.length;
                 let angle = (2 * Math.PI) / total;
                 names.forEach((name, index) => {
@@ -99,9 +102,10 @@
                     ctx.arc(150, 150, 150, index * angle, (index + 1) * angle);
                     ctx.fillStyle = `hsl(${index * (360 / total)}, 100%, 50%)`;
                     ctx.fill();
+                    ctx.stroke();
                     ctx.fillStyle = "white";
                     ctx.font = "14px Arial";
-                    ctx.fillText(name, 120, 150);
+                    ctx.fillText(name, 150 + Math.cos(index * angle + angle / 2) * 100, 150 + Math.sin(index * angle + angle / 2) * 100);
                     ctx.closePath();
                 });
             }
@@ -125,8 +129,6 @@
     </div>
     <div id="viewer">
         <h2> ~ ★ Clan La Élite ★ ~ </h2>
-        <p id="countdown" class="countdown">⏳ Tiempo restante: -- s</p>
-        <div id="participantList" class="participant-list"></div>
         <div class="wheel-container">
             <canvas id="wheelCanvas" width="300" height="300"></canvas>
         </div>
