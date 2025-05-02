@@ -12,6 +12,25 @@
     .participant-list { margin-top: 18px; font-size: 18px; display: none; }
     #wheelcanvas { display: none; margin: 0 auto; }
 
+#pointer {
+  width: 0;
+  height: 0;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-bottom: 30px solid red;
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+}
+    
+#wheelcontainer {
+  position: relative;
+  display: inline-block;
+}
+
+  
     @keyframes zoomIn {
       0% { transform: scale(0); opacity: 0; }
       50% { transform: scale(1.1); opacity: 1; }
@@ -21,6 +40,8 @@
     .animate-winner {
       animation: zoomIn 1s ease-out;
     }
+
+  
   </style>
 
   <!-- Librerías para la ruleta -->
@@ -191,27 +212,47 @@
         onValue(ref(db, "sorteo/participants"), (snapshot) => {
           if (!snapshot.exists()) return;
           const participants = snapshot.val();
+      
+          // Calcular ángulo proporcional para cada participante
           const segments = participants.map(p => ({
             fillStyle: getRandomColor(),
-            text: p.name
+            text: p.name,
+            angle: (p.percentage / 100) * 360
           }));
-
+      
           wheelCanvas.style.display = "block";
-
+      
           wheel = new Winwheel({
             canvasId: "wheelcanvas",
-            numSegments: segments.length,
             segments: segments,
             animation: {
               type: "spinToStop",
               duration: 7,
               spins: 8,
               callbackFinished: () => {
-                winnerDisplay.innerText = `\n🎉 Ganador: ${winnerName} 🎉`;
+                winnerDisplay.innerText = `\n\n🎉 Ganador: ${winnerName} 🎉`;
                 winnerDisplay.classList.add("animate-winner");
               }
             }
           });
+      
+          // Calcular el ángulo para el ganador
+          let cumulativeAngle = 0;
+          let stopAngle = 0;
+          for (let i = 0; i < segments.length; i++) {
+            const seg = segments[i];
+            if (seg.text === winnerName) {
+              stopAngle = 360 - (cumulativeAngle + seg.angle / 2);
+              break;
+            }
+            cumulativeAngle += seg.angle;
+          }
+      
+          wheel.animation.stopAngle = stopAngle % 360;
+          wheel.startAnimation();
+        }, { onlyOnce: true });
+      }
+
 
           // Encuentra el ángulo del ganador
           const winnerIndex = segments.findIndex(s => s.text === winnerName);
@@ -253,7 +294,11 @@
     <h2> ~ ★ Clan La Élite ★ ~ </h2>
     <p id="countdown" class="countdown">⏳ Tiempo restante: -- s</p>
     <div id="participantList" class="participant-list"></div>
+    <div id="wheelcontainer">
+    <div id="pointer"></div>
     <canvas id="wheelcanvas" width="400" height="400"></canvas>
+</div>
+
     <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
   </div>
 </body>
