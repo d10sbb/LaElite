@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Sorteo mensual LaÉlite</title>
     <script src="https://cdn.jsdelivr.net/npm/winwheel@2.7.0/Winwheel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
     <style>
         body { font-family: Arial, sans-serif; text-align: center; }
         #admin, #loginContainer { display: none; }
@@ -27,6 +28,33 @@
             display: none;
         }
     </style>
+</head>
+<body>
+    <h1>Sorteo del trofeo del Ranking Mensual de Clanes - BoomBang.TV</h1>
+    <div id="loginContainer">
+        <h2>Iniciar Sesión</h2>
+        <input type="email" id="email" placeholder="Correo electrónico">
+        <input type="password" id="password" placeholder="Contraseña">
+        <button onclick="login()">Iniciar Sesión</button>
+    </div>
+    <div id="admin">
+        <h2>Preparación del sorteo</h2>
+        <div id="userInputs"></div>
+        <br><button id="startButton">Iniciar Sorteo</button>
+        <button id="resetButton">Borrar Sorteo</button>
+        <br><button onclick="logout()">Cerrar Sesión</button>
+    </div>
+    <div id="viewer">
+        <h2> ~ ★ Clan La Élite ★ ~ </h2>
+        <p id="countdown" class="countdown">⏳ Tiempo restante: -- s</p>
+        <div id="participantList" class="participant-list"></div>
+        <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
+        <div id="wheelContainer">
+            <div id="pointer"></div>
+            <canvas id="canvas" width="500" height="500"></canvas>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
@@ -46,8 +74,8 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth();
         const db = getDatabase(app);
-
         let wheel;
+        let spinning = false;
 
         document.addEventListener("DOMContentLoaded", function () {
             const isAdmin = location.search.includes("admin");
@@ -121,19 +149,7 @@
                     alert("Introduce un tiempo válido para la cuenta atrás.");
                     return;
                 }
-                set(ref(db, "sorteo/countdown"), timeLeft);
-                countdownTimer = setInterval(() => {
-                    if (timeLeft > 0) {
-                        timeLeft--;
-                        set(ref(db, "sorteo/countdown"), timeLeft);
-                    } else {
-                        clearInterval(countdownTimer);
-                        startDraw();
-                    }
-                }, 1000);
-            }
 
-            function startDraw() {
                 let participants = [];
                 let participantInfo = [];
                 for (let i = 0; i < 10; i++) {
@@ -148,39 +164,74 @@
                     alert("Ingresa datos válidos en los campos.");
                     return;
                 }
+
                 set(ref(db, "sorteo/participants"), participantInfo);
+                set(ref(db, "sorteo/countdown"), timeLeft);
 
-                // Configurar ruleta
-                let segments = participantInfo.map(p => ({
-                    fillStyle: '#' + Math.floor(Math.random()*16777215).toString(16),
-                    text: p.name,
-                    size: (p.percentage / 100) * 360
-                }));
-
-                wheel = new Winwheel({
-                    canvasId: 'canvas',
-                    numSegments: segments.length,
-                    segments: segments,
-                    animation: {
-                        type: 'spinToStop',
-                        duration: 5,
-                        spins: 8,
-                        callbackFinished: function (winnerName) {
-                            set(ref(db, "sorteo/ganador"), wheel.getIndicatedSegment().text);
-                        }
+                countdownTimer = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        set(ref(db, "sorteo/countdown"), timeLeft);
+                    } else {
+                        clearInterval(countdownTimer);
+                        // Elegimos al azar pero consistente
+                        const seed = new Date().getUTCSeconds();
+                        const randomIndex = seed % participants.length;
+                        const winner = participants[randomIndex];
+                        set(ref(db, "sorteo/ganador"), winner);
                     }
-                });
-
-                wheelContainer.style.display = "block";
-                pointer.style.display = "block";
-
-                wheel.startAnimation();
+                }, 1000);
             }
 
             function watchWinner() {
                 onValue(ref(db, "sorteo/ganador"), (snapshot) => {
-                    winnerDisplay.innerText = snapshot.val() ? `\n🎉 Ganador: ${snapshot.val()} 🎉` : "Esperando el sorteo...";
+                    const winner = snapshot.val();
+                    if (!winner || spinning) return;
+                    winnerDisplay.innerText = `\n\n🎉 Ganador: ${winner} 🎉`;
+
+                    get(ref(db, "sorteo/participants")).then(partSnap => {
+                        const data = partSnap.val();
+                        if (!data) return;
+
+                        const segments = data.map(p => ({
+                            fillStyle: '#' + Math.floor(Math.random()*16777215).toString(16),
+                            text: p.name,
+                            size: (p.percentage / 100) * 360
+                        }));
+
+                        wheel = new Winwheel({
+                            canvasId: 'canvas',
+                            segments: segments,
+                            animation: {
+                                type: 'spinToStop',
+                                duration: 5,
+                                spins: 8,
+                                stopAngle: getStopAngle(segments, winner),
+                                callbackFinished: function () {
+                                    spinning = false;
+                                }
+                            }
+                        });
+
+                        wheelContainer.style.display = "block";
+                        pointer.style.display = "block";
+                        spinning = true;
+                        wheel.startAnimation();
+                    });
                 });
+            }
+
+            function getStopAngle(segments, winner) {
+                let totalAngle = 0;
+                for (let i = 0; i < segments.length; i++) {
+                    const s = segments[i];
+                    if (s.text === winner) {
+                        const middle = totalAngle + (s.size / 2);
+                        return 360 - middle;
+                    }
+                    totalAngle += s.size;
+                }
+                return 0;
             }
 
             function watchCountdown() {
@@ -197,31 +248,5 @@
             }
         });
     </script>
-</head>
-<body>
-    <h1>Sorteo del trofeo del Ranking Mensual de Clanes - BoomBang.TV</h1>
-    <div id="loginContainer">
-        <h2>Iniciar Sesión</h2>
-        <input type="email" id="email" placeholder="Correo electrónico">
-        <input type="password" id="password" placeholder="Contraseña">
-        <button onclick="login()">Iniciar Sesión</button>
-    </div>
-    <div id="admin">
-        <h2>Preparación del sorteo</h2>
-        <div id="userInputs"></div>
-        <br><button id="startButton">Iniciar Sorteo</button>
-        <button id="resetButton">Borrar Sorteo</button>
-        <br><button onclick="logout()">Cerrar Sesión</button>
-    </div>
-    <div id="viewer">
-        <h2> ~ ★ Clan La Élite ★ ~ </h2>
-        <p id="countdown" class="countdown">⏳ Tiempo restante: -- s</p>
-        <div id="participantList" class="participant-list"></div>
-        <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
-        <div id="wheelContainer">
-            <div id="pointer"></div>
-            <canvas id="canvas" width="500" height="500"></canvas>
-        </div>
-    </div>
 </body>
 </html>
