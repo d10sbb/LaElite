@@ -1,263 +1,289 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sorteo mensual LaÉlite</title>
-    <script src="https://cdn.jsdelivr.net/npm/winwheel@2.7.0/Winwheel.min.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; text-align: center; }
-        #admin, #loginContainer { display: none; }
-        .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; white-space: pre-line; }
-        .countdown { font-size: 28px; color: red; font-weight: bold; margin-top: 15px; }
-        .participant-list { margin-top: 18px; font-size: 18px; display: none; }
-        #wheelContainer { margin-top: 30px; display: none; position: relative; width: 500px; height: 500px; margin-left: auto; margin-right: auto; }
-        #canvas { position: relative; z-index: 1; }
-        #pointer {
-            position: absolute;
-            top: -20px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 20px solid transparent;
-            border-right: 20px solid transparent;
-            border-bottom: 40px solid black;
-            z-index: 2;
-            display: none;
-        }
-    </style>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
-        import { getDatabase, ref, set, onValue, remove, get } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sorteo mensual LaÉlite</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; }
+    #admin, #loginContainer { display: none; }
+    .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; }
+    .countdown { font-size: 28px; color: red; font-weight: bold; margin-top: 15px; }
+    .participant-list { margin-top: 18px; font-size: 18px; display: none; }
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
-            authDomain: "sorteo-ad02e.firebaseapp.com",
-            databaseURL: "https://sorteo-ad02e-default-rtdb.firebaseio.com/",
-            projectId: "sorteo-ad02e",
-            storageBucket: "sorteo-ad02e.appspot.com",
-            messagingSenderId: "505337439977",
-            appId: "1:505337439977:web:8691fb960b65f98ae33278",
-            measurementId: "G-ZJP53X41YY"
-        };
+    #wheelContainer {
+      position: relative;
+      width: 400px;
+      margin: 0 auto;
+      display: none;
+    }
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth();
-        const db = getDatabase(app);
+    .pointer {
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-bottom: 30px solid red;
+      position: absolute;
+      top: -10px;
+      left: calc(50% - 20px);
+      z-index: 10;
+    }
 
-        let wheel;
+    @keyframes zoomIn {
+      0% { transform: scale(0); opacity: 0; }
+      50% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
 
-        document.addEventListener("DOMContentLoaded", function () {
-            const isAdmin = location.search.includes("admin");
-            const adminDiv = document.getElementById("admin");
-            const loginContainer = document.getElementById("loginContainer");
-            const winnerDisplay = document.getElementById("winnerDisplay");
-            const participantList = document.getElementById("participantList");
-            const countdownDisplay = document.getElementById("countdown");
-            const startButton = document.getElementById("startButton");
-            const resetButton = document.getElementById("resetButton");
-            const wheelContainer = document.getElementById("wheelContainer");
-            const pointer = document.getElementById("pointer");
-            let countdownTimer;
+    .animate-winner {
+      animation: zoomIn 1s ease-out;
+    }
+  </style>
 
-            if (isAdmin) {
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        adminDiv.style.display = "block";
-                        loginContainer.style.display = "none";
-                        setupAdmin();
-                    } else {
-                        loginContainer.style.display = "block";
-                    }
-                });
-            } else {
-                document.getElementById("viewer").style.display = "block";
-                watchWinner();
-                watchCountdown();
-                watchParticipants();
-            }
+  <!-- Librerías para la ruleta -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/zarocknz/javascript-winwheel@2.7.0/Winwheel.min.js"></script>
 
-            window.login = function () {
-                const email = document.getElementById("email").value;
-                const password = document.getElementById("password").value;
-                signInWithEmailAndPassword(auth, email, password)
-                    .then(() => location.reload())
-                    .catch(error => alert("Error en la autenticación: " + error.message));
-            };
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
+    import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
-            window.logout = function () {
-                auth.signOut().then(() => location.reload())
-                    .catch(error => alert("Error al cerrar sesión: " + error.message));
-            };
+    const firebaseConfig = {
+      apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
+      authDomain: "sorteo-ad02e.firebaseapp.com",
+      databaseURL: "https://sorteo-ad02e-default-rtdb.firebaseio.com/",
+      projectId: "sorteo-ad02e",
+      storageBucket: "sorteo-ad02e.appspot.com",
+      messagingSenderId: "505337439977",
+      appId: "1:505337439977:web:8691fb960b65f98ae33278",
+      measurementId: "G-ZJP53X41YY"
+    };
 
-            function setupAdmin() {
-                const userInputs = document.getElementById("userInputs");
-                userInputs.innerHTML = `<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>`;
-                for (let i = 0; i < 10; i++) {
-                    userInputs.innerHTML += `<div><input type='text' placeholder='Nombre' id='user${i}'><input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>`;
-                }
-            }
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getDatabase(app);
 
-            startButton.addEventListener("click", startCountdown);
-            resetButton.addEventListener("click", resetDraw);
+    let wheel;
+    let countdownTimer;
 
-            function resetDraw() {
-                remove(ref(db, "sorteo/ganador"));
-                remove(ref(db, "sorteo/participants"));
-                remove(ref(db, "sorteo/countdown"));
-                winnerDisplay.innerText = "Aquí aparecerá el ganador";
-                countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
-                participantList.innerHTML = "";
-                participantList.style.display = "none";
-                wheelContainer.style.display = "none";
-                pointer.style.display = "none";
-            }
+    document.addEventListener("DOMContentLoaded", function () {
+      const isAdmin = location.search.includes("admin");
+      const adminDiv = document.getElementById("admin");
+      const loginContainer = document.getElementById("loginContainer");
+      const viewerDiv = document.getElementById("viewer");
+      const winnerDisplay = document.getElementById("winnerDisplay");
+      const participantList = document.getElementById("participantList");
+      const countdownDisplay = document.getElementById("countdown");
+      const startButton = document.getElementById("startButton");
+      const resetButton = document.getElementById("resetButton");
+      const wheelContainer = document.getElementById("wheelContainer");
 
-            function startCountdown() {
-                let timeLeft = parseInt(document.getElementById("countdownInput").value);
-                if (isNaN(timeLeft) || timeLeft <= 0) {
-                    alert("Introduce un tiempo válido para la cuenta atrás.");
-                    return;
-                }
-                set(ref(db, "sorteo/countdown"), timeLeft);
-                countdownTimer = setInterval(() => {
-                    if (timeLeft > 0) {
-                        timeLeft--;
-                        set(ref(db, "sorteo/countdown"), timeLeft);
-                    } else {
-                        clearInterval(countdownTimer);
-                        startDraw();
-                    }
-                }, 1000);
-            }
-
-            function startDraw() {
-                let participantInfo = [];
-                for (let i = 0; i < 10; i++) {
-                    let name = document.getElementById(`user${i}`).value.trim();
-                    let percentage = parseFloat(document.getElementById(`perc${i}`).value);
-                    if (name && !isNaN(percentage) && percentage > 0) {
-                        participantInfo.push({ name, percentage });
-                    }
-                }
-                if (participantInfo.length === 0) {
-                    alert("Ingresa datos válidos en los campos.");
-                    return;
-                }
-                set(ref(db, "sorteo/participants"), participantInfo);
-
-                const flatList = [];
-                participantInfo.forEach(p => {
-                    const count = Math.round(p.percentage);
-                    for (let i = 0; i < count; i++) {
-                        flatList.push(p.name);
-                    }
-                });
-
-                const winner = flatList[Math.floor(Math.random() * flatList.length)];
-                set(ref(db, "sorteo/ganador"), winner);
-            }
-
-            function watchWinner() {
-                onValue(ref(db, "sorteo/ganador"), (snapshot) => {
-                    const winner = snapshot.val();
-                    if (winner && wheel) {
-                        winnerDisplay.innerText = `\n🎉 Ganador: ${winner} 🎉`;
-                        const segments = wheel.segments;
-                        const matchingIndices = segments.map((s, i) => s.text === winner ? i : -1).filter(i => i !== -1);
-                        if (matchingIndices.length > 0) {
-                            const chosenIndex = matchingIndices[Math.floor(matchingIndices.length / 2)];
-                            const anglePerSegment = 360 / segments.length;
-                            const stopAngle = 360 - (chosenIndex * anglePerSegment + anglePerSegment / 2);
-                            wheel.animation.stopAngle = stopAngle;
-                            wheel.startAnimation();
-                        }
-                    } else if (!winner) {
-                        winnerDisplay.innerText = "Esperando el sorteo...";
-                    }
-                });
-            }
-
-            function watchCountdown() {
-                onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-                    countdownDisplay.innerText = snapshot.val() ? `⏳ Tiempo restante: ${snapshot.val()} s` : "⏳ Tiempo restante: -- s";
-                });
-            }
-
-            function watchParticipants() {
-                onValue(ref(db, "sorteo/participants"), (snapshot) => {
-                    const data = snapshot.val();
-                    if (data) {
-                        participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
-                        participantList.style.display = "block";
-                        wheelContainer.style.display = "block";
-                        pointer.style.display = "block";
-
-                        const segments = [];
-                        data.forEach(p => {
-                            const count = Math.max(1, Math.round(p.percentage));
-                            for (let i = 0; i < count; i++) {
-                                segments.push({
-                                    fillStyle: '#' + Math.floor(Math.random()*16777215).toString(16),
-                                    text: p.name
-                                });
-                            }
-                        });
-
-                        if (segments.length > 0) {
-                            // Espera brevemente para asegurarse de que el canvas está visible y renderizado
-                            setTimeout(() => {
-                                wheel = new Winwheel({
-                                    canvasId: 'canvas',
-                                    numSegments: segments.length,
-                                    segments: segments,
-                                    animation: {
-                                        type: 'spinToStop',
-                                        duration: 5,
-                                        spins: 8,
-                                        callbackFinished: () => {}
-                                    }
-                                });
-                            }, 200); // Pequeña pausa para evitar que el canvas esté oculto al inicializar
-                        }
-
-                    } else {
-                        participantList.innerHTML = "";
-                        participantList.style.display = "none";
-                        wheelContainer.style.display = "none";
-                        pointer.style.display = "none";
-                    }
-                });
-            }
+      if (isAdmin) {
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            adminDiv.style.display = "block";
+            loginContainer.style.display = "none";
+            setupAdmin();
+          } else {
+            loginContainer.style.display = "block";
+          }
         });
-    </script>
+      } else {
+        watchWinner();
+        watchCountdown();
+        watchParticipants();
+      }
+
+      window.login = function () {
+        const email = document.getElementById("email").value;
+        const password = document.getElementById("password").value;
+
+        signInWithEmailAndPassword(auth, email, password)
+          .then(() => location.reload())
+          .catch((error) => alert("Error en la autenticación: " + error.message));
+      };
+
+      window.logout = function () {
+        auth.signOut().then(() => location.reload())
+          .catch((error) => alert("Error al cerrar sesión: " + error.message));
+      };
+
+      function setupAdmin() {
+        const userInputs = document.getElementById("userInputs");
+        userInputs.innerHTML = `<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>`;
+        for (let i = 0; i < 10; i++) {
+          userInputs.innerHTML += `<div><input type='text' placeholder='Nombre' id='user${i}'><input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>`;
+        }
+      }
+
+      startButton.addEventListener("click", startCountdown);
+      resetButton.addEventListener("click", resetDraw);
+
+      function resetDraw() {
+        remove(ref(db, "sorteo/ganador"));
+        remove(ref(db, "sorteo/participants"));
+        remove(ref(db, "sorteo/countdown"));
+
+        winnerDisplay.innerText = "Aquí aparecerá el ganador";
+        countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
+        participantList.innerHTML = "";
+        participantList.style.display = "none";
+        wheelContainer.style.display = "none";
+      }
+
+      function startCountdown() {
+        let timeLeft = parseInt(document.getElementById("countdownInput").value);
+        if (isNaN(timeLeft) || timeLeft <= 0) {
+          alert("Introduce un tiempo válido para la cuenta atrás.");
+          return;
+        }
+        set(ref(db, "sorteo/countdown"), timeLeft);
+        countdownTimer = setInterval(() => {
+          if (timeLeft > 0) {
+            timeLeft--;
+            set(ref(db, "sorteo/countdown"), timeLeft);
+          } else {
+            clearInterval(countdownTimer);
+            startDraw();
+          }
+        }, 1000);
+      }
+
+      function startDraw() {
+        let participants = [];
+        let participantInfo = [];
+        for (let i = 0; i < 10; i++) {
+          let name = document.getElementById(`user${i}`).value.trim();
+          let percentage = parseFloat(document.getElementById(`perc${i}`).value);
+          if (name && !isNaN(percentage) && percentage > 0) {
+            participantInfo.push({ name, percentage });
+            for (let j = 0; j < percentage * 10; j++) {
+              participants.push(name);
+            }
+          }
+        }
+
+        if (participants.length === 0) {
+          alert("Ingresa datos válidos en los campos.");
+          return;
+        }
+
+        set(ref(db, "sorteo/participants"), participantInfo);
+        let winner = participants[Math.floor(Math.random() * participants.length)];
+        set(ref(db, "sorteo/ganador"), winner);
+      }
+
+      function watchWinner() {
+        onValue(ref(db, "sorteo/ganador"), (snapshot) => {
+          const winner = snapshot.val();
+          if (winner) {
+            launchWheel(winner);
+          } else {
+            winnerDisplay.innerText = "Esperando el sorteo...";
+          }
+        });
+      }
+
+      function watchCountdown() {
+        onValue(ref(db, "sorteo/countdown"), (snapshot) => {
+          countdownDisplay.innerText = snapshot.val() ? `⏳ Tiempo restante: ${snapshot.val()} s` : "⏳ Tiempo restante: -- s";
+        });
+      }
+
+      function watchParticipants() {
+        onValue(ref(db, "sorteo/participants"), (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
+            participantList.style.display = "block";
+          } else {
+            participantList.innerHTML = "";
+            participantList.style.display = "none";
+          }
+        });
+      }
+
+      function launchWheel(winnerName) {
+        onValue(ref(db, "sorteo/participants"), (snapshot) => {
+          if (!snapshot.exists()) return;
+          const participants = snapshot.val();
+
+          const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+          const segments = participants.map(p => ({
+            fillStyle: getRandomColor(),
+            text: p.name,
+            size: (p.percentage / total) * 360
+          }));
+
+          document.getElementById("wheelContainer").style.display = "block";
+
+          wheel = new Winwheel({
+            canvasId: "wheelcanvas",
+            segments: segments,
+            animation: {
+              type: "spinToStop",
+              duration: 7,
+              spins: 8,
+              callbackFinished: () => {
+                winnerDisplay.innerText = `\n🎉 Ganador: ${winnerName} 🎉`;
+                winnerDisplay.classList.add("animate-winner");
+              }
+            }
+          });
+
+          // Calcular ángulo de parada
+          let cumulative = 0;
+          let winnerAngle = 0;
+          for (const seg of segments) {
+            if (seg.text === winnerName) {
+              winnerAngle = cumulative + (seg.size / 2);
+              break;
+            }
+            cumulative += seg.size;
+          }
+
+          wheel.animation.stopAngle = (360 - winnerAngle) % 360;
+          wheel.startAnimation();
+        }, { onlyOnce: true });
+      }
+
+      function getRandomColor() {
+        const letters = '789ABCD';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+          color += letters[Math.floor(Math.random() * letters.length)];
+        }
+        return color;
+      }
+    });
+  </script>
 </head>
 <body>
-    <h1>Sorteo del trofeo del Ranking Mensual de Clanes - BoomBang.TV</h1>
-    <div id="loginContainer">
-        <h2>Iniciar Sesión</h2>
-        <input type="email" id="email" placeholder="Correo electrónico">
-        <input type="password" id="password" placeholder="Contraseña">
-        <button onclick="login()">Iniciar Sesión</button>
+  <h1>Sorteo del trofeo del Ranking Mensual de Clanes - BoomBang.TV</h1>
+  <div id="loginContainer">
+    <h2>Iniciar Sesión</h2>
+    <input type="email" id="email" placeholder="Correo electrónico">
+    <input type="password" id="password" placeholder="Contraseña">
+    <button onclick="login()">Iniciar Sesión</button>
+  </div>
+  <div id="admin">
+    <h2>Preparación del sorteo</h2>
+    <div id="userInputs"></div>
+    <br><button id="startButton">Iniciar Sorteo</button>
+    <button id="resetButton">Borrar Sorteo</button>
+    <br><button onclick="logout()">Cerrar Sesión</button>
+  </div>
+  <div id="viewer">
+    <h2> ~ ★ Clan La Élite ★ ~ </h2>
+    <p id="countdown" class="countdown">⏳ Tiempo restante: -- s</p>
+    <div id="participantList" class="participant-list"></div>
+    <div id="wheelContainer">
+      <div class="pointer"></div>
+      <canvas id="wheelcanvas" width="400" height="400"></canvas>
     </div>
-    <div id="admin">
-        <h2>Preparación del sorteo</h2>
-        <div id="userInputs"></div>
-        <br><button id="startButton">Iniciar Sorteo</button>
-        <button id="resetButton">Borrar Sorteo</button>
-        <br><button onclick="logout()">Cerrar Sesión</button>
-    </div>
-    <div id="viewer" style="display:none">
-        <h2> ~ ★ Clan La Élite ★ ~ </h2>
-        <p id="countdown" class="countdown">⏳ Tiempo restante: -- s</p>
-        <div id="participantList" class="participant-list"></div>
-        <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
-        <div id="wheelContainer">
-            <div id="pointer"></div>
-            <canvas id="canvas" width="500" height="500"></canvas>
-        </div>
-    </div>
+    <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
+  </div>
 </body>
 </html>
