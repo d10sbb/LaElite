@@ -187,18 +187,46 @@
         });
       }
 
+      let wheelDrawn = false;
+
       function watchParticipants() {
         onValue(ref(db, "sorteo/participants"), (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
             participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
             participantList.style.display = "block";
+      
+            // Mostrar la ruleta si no se ha dibujado ya
+            if (!wheelDrawn) {
+              drawWheelFromData(data);
+              wheelDrawn = true;
+            }
           } else {
             participantList.innerHTML = "";
             participantList.style.display = "none";
           }
         });
       }
+
+function drawWheelFromData(participants) {
+  const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+
+  const segmentValues = participants.map(p => ({
+    fillStyle: getRandomColor(),
+    text: p.name,
+    size: (p.percentage / total) * 360
+  }));
+
+  document.getElementById("wheelContainer").style.display = "block";
+
+  wheel = new Winwheel({
+    canvasId: "wheelcanvas",
+    drawMode: 'segment',
+    numSegments: segmentValues.length,
+    segments: segmentValues
+  });
+}
+
 
       function launchWheelAndPickWinner(participants) {
         const total = participants.reduce((sum, p) => sum + p.percentage, 0);
