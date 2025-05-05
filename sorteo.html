@@ -171,42 +171,24 @@
             function watchWinner() {
                 onValue(ref(db, "sorteo/ganador"), (snapshot) => {
                     const winner = snapshot.val();
-                    if (winner) {
+                    if (winner && wheel) {
                         winnerDisplay.innerText = `\n\n🎉 Ganador: ${winner} 🎉`;
-                        get(ref(db, "sorteo/participants")).then(dataSnapshot => {
-                            const data = dataSnapshot.val();
-                            if (!data) return;
-
-                            const segments = [];
-                            data.forEach(p => {
-                                const count = Math.round(p.percentage);
-                                for (let i = 0; i < count; i++) {
-                                    segments.push({ fillStyle: '#' + Math.floor(Math.random()*16777215).toString(16), text: p.name });
-                                }
-                            });
-
-                            wheel = new Winwheel({
-                                canvasId: 'canvas',
-                                numSegments: segments.length,
-                                segments: segments,
-                                animation: {
-                                    type: 'spinToStop',
-                                    duration: 5,
-                                    spins: 8,
-                                    stopAngle: getStopAngle(segments, winner),
-                                    callbackFinished: () => {}
-                                }
-                            });
-
-                            wheelContainer.style.display = "block";
-                            pointer.style.display = "block";
-                            wheel.startAnimation();
-                        });
-                    } else {
+            
+                        // Calcular ángulo de parada y girar ruleta
+                        const segments = wheel.segments;
+                        const indexes = segments.map((s, i) => s.text === winner ? i : -1).filter(i => i !== -1);
+                        const chosenIndex = indexes[Math.floor(indexes.length / 2)];
+                        const anglePerSegment = 360 / segments.length;
+                        const stopAngle = 360 - (chosenIndex * anglePerSegment + anglePerSegment / 2);
+            
+                        wheel.animation.stopAngle = stopAngle;
+                        wheel.startAnimation();
+                    } else if (!winner) {
                         winnerDisplay.innerText = "Esperando el sorteo...";
                     }
                 });
             }
+
 
             function watchCountdown() {
                 onValue(ref(db, "sorteo/countdown"), (snapshot) => {
@@ -216,29 +198,47 @@
 
             function watchParticipants() {
                 onValue(ref(db, "sorteo/participants"), (snapshot) => {
-                    if (!snapshot.exists()) {
-                        participantList.innerHTML = "";
-                        participantList.style.display = "none";
-                        return;
-                    }
                     const data = snapshot.val();
-                    participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
-                    participantList.style.display = "block";
-
-                    const segments = [];
-                    data.forEach(p => {
-                        const count = Math.round(p.percentage);
-                        for (let i = 0; i < count; i++) {
-                            segments.push({ fillStyle: '#' + Math.floor(Math.random()*16777215).toString(16), text: p.name });
-                        }
-                    });
-                    if (segments.length > 0) {
-                        wheel = new Winwheel({ canvasId: 'canvas', numSegments: segments.length, segments: segments });
+                    if (data) {
+                        participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
+                        participantList.style.display = "block";
+            
+                        // Crear segmentos según porcentaje
+                        const segments = [];
+                        data.forEach(p => {
+                            const count = Math.round(p.percentage);
+                            for (let i = 0; i < count; i++) {
+                                segments.push({
+                                    fillStyle: '#' + Math.floor(Math.random()*16777215).toString(16),
+                                    text: p.name
+                                });
+                            }
+                        });
+            
+                        // Crear y mostrar la ruleta
+                        wheel = new Winwheel({
+                            canvasId: 'canvas',
+                            numSegments: segments.length,
+                            segments: segments,
+                            animation: {
+                                type: 'spinToStop',
+                                duration: 5,
+                                spins: 8,
+                                callbackFinished: () => {}
+                            }
+                        });
+            
                         wheelContainer.style.display = "block";
                         pointer.style.display = "block";
+                    } else {
+                        participantList.innerHTML = "";
+                        participantList.style.display = "none";
+                        wheelContainer.style.display = "none";
+                        pointer.style.display = "none";
                     }
                 });
             }
+
         });
     </script>
 </head>
