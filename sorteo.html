@@ -10,27 +10,7 @@
     .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; }
     .countdown { font-size: 28px; color: red; font-weight: bold; margin-top: 15px; }
     .participant-list { margin-top: 18px; font-size: 18px; display: none; }
-
-    #wheelContainer {
-      position: relative;
-      width: 400px;
-      height: 400px;
-      margin: 20px auto;
-      display: none;
-    }
-
-    .pointer {
-      width: 0;
-      height: 0;
-      border-left: 20px solid transparent;
-      border-right: 20px solid transparent;
-      border-bottom: 30px solid red;
-      position: absolute;
-      top: -15px;
-      left: calc(50% - 20px);
-      z-index: 10;
-      transform: rotate(180deg);
-    }
+    #wheelcanvas { display: none; margin: 0 auto; }
 
     @keyframes zoomIn {
       0% { transform: scale(0); opacity: 0; }
@@ -41,10 +21,25 @@
     .animate-winner {
       animation: zoomIn 1s ease-out;
     }
+
+    #pointer {
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-top: 30px solid black;
+      margin: 0 auto;
+      transform: rotate(180deg);
+      position: relative;
+      top: 10px;
+      z-index: 2;
+    }
   </style>
 
+  <!-- Librerías para la ruleta -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/zarocknz/javascript-winwheel@2.7.0/Winwheel.min.js"></script>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
@@ -67,19 +62,18 @@
 
     let wheel;
     let countdownTimer;
-    let wheelSpinning = false;
 
     document.addEventListener("DOMContentLoaded", function () {
       const isAdmin = location.search.includes("admin");
       const adminDiv = document.getElementById("admin");
       const loginContainer = document.getElementById("loginContainer");
-      const viewerDiv = document.getElementById("viewer");
       const winnerDisplay = document.getElementById("winnerDisplay");
       const participantList = document.getElementById("participantList");
       const countdownDisplay = document.getElementById("countdown");
       const startButton = document.getElementById("startButton");
       const resetButton = document.getElementById("resetButton");
-      const wheelContainer = document.getElementById("wheelContainer");
+      const wheelCanvas = document.getElementById("wheelcanvas");
+      const pointer = document.getElementById("pointer");
 
       if (isAdmin) {
         onAuthStateChanged(auth, (user) => {
@@ -100,6 +94,7 @@
       window.login = function () {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
+
         signInWithEmailAndPassword(auth, email, password)
           .then(() => location.reload())
           .catch((error) => alert("Error en la autenticación: " + error.message));
@@ -130,9 +125,8 @@
         countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
         participantList.innerHTML = "";
         participantList.style.display = "none";
-        wheelContainer.style.display = "none";
-        wheel = null;
-        wheelSpinning = false;
+        wheelCanvas.style.display = "none";
+        pointer.style.display = "none";
       }
 
       function startCountdown() {
@@ -161,29 +155,29 @@
           let percentage = parseFloat(document.getElementById(`perc${i}`).value);
           if (name && !isNaN(percentage) && percentage > 0) {
             participantInfo.push({ name, percentage });
+            for (let j = 0; j < percentage * 10; j++) {
+              participants.push(name);
+            }
           }
         }
-        if (participantInfo.length === 0) {
+
+        if (participants.length === 0) {
           alert("Ingresa datos válidos en los campos.");
           return;
         }
-        set(ref(db, "sorteo/participants"), participantInfo);
 
-        let pool = [];
-        participantInfo.forEach(p => {
-          for (let i = 0; i < p.percentage * 10; i++) {
-            pool.push(p.name);
-          }
-        });
-        let winner = pool[Math.floor(Math.random() * pool.length)];
+        set(ref(db, "sorteo/participants"), participantInfo);
+        let winner = participants[Math.floor(Math.random() * participants.length)];
         set(ref(db, "sorteo/ganador"), winner);
       }
 
       function watchWinner() {
         onValue(ref(db, "sorteo/ganador"), (snapshot) => {
           const winner = snapshot.val();
-          if (winner && !wheelSpinning) {
+          if (winner) {
             launchWheel(winner);
+          } else {
+            winnerDisplay.innerText = "Esperando el sorteo...";
           }
         });
       }
@@ -210,40 +204,47 @@
       function launchWheel(winnerName) {
         onValue(ref(db, "sorteo/participants"), (snapshot) => {
           if (!snapshot.exists()) return;
-          const data = snapshot.val();
-          const total = data.reduce((sum, p) => sum + p.percentage, 0);
+          const participants = snapshot.val();
 
-          const segments = data.map(p => ({
-            text: p.name,
+          const segments = participants.map(p => ({
             fillStyle: getRandomColor(),
-            size: (p.percentage / total) * 360
+            text: p.name,
+            size: p.percentage
           }));
 
-          const winnerIndex = segments.findIndex(s => s.text === winnerName);
-          let angleOffset = segments.slice(0, winnerIndex).reduce((sum, seg) => sum + seg.size, 0);
-          let stopAngle = (360 - (angleOffset + segments[winnerIndex].size / 2)) % 360;
+          wheelCanvas.style.display = "block";
+          pointer.style.display = "block";
 
           wheel = new Winwheel({
-            canvasId: 'wheelcanvas',
-            drawMode: 'segment',
-            numSegments: segments.length,
+            canvasId: "wheelcanvas",
             segments: segments,
             animation: {
-              type: 'spinToStop',
+              type: "spinToStop",
               duration: 7,
-              spins: 6,
-              stopAngle: stopAngle,
+              spins: 8,
               callbackFinished: () => {
                 winnerDisplay.innerText = `\n🎉 Ganador: ${winnerName} 🎉`;
                 winnerDisplay.classList.add("animate-winner");
-                wheelSpinning = false;
               }
             }
           });
 
-          document.getElementById("wheelContainer").style.display = "block";
+          let totalWeight = segments.reduce((sum, seg) => sum + seg.size, 0);
+          let accumulated = 0;
+          let stopAngle = 0;
+
+          for (let i = 0; i < segments.length; i++) {
+            const seg = segments[i];
+            const segmentAngle = (seg.size / totalWeight) * 360;
+            if (seg.text === winnerName) {
+              stopAngle = (360 - (accumulated + segmentAngle / 2)) % 360;
+              break;
+            }
+            accumulated += segmentAngle;
+          }
+
+          wheel.animation.stopAngle = stopAngle;
           wheel.startAnimation();
-          wheelSpinning = true;
         }, { onlyOnce: true });
       }
 
@@ -277,10 +278,8 @@
     <h2> ~ ★ Clan La Élite ★ ~ </h2>
     <p id="countdown" class="countdown">⏳ Tiempo restante: -- s</p>
     <div id="participantList" class="participant-list"></div>
-    <div id="wheelContainer">
-      <div class="pointer"></div>
-      <canvas id="wheelcanvas" width="400" height="400"></canvas>
-    </div>
+    <div id="pointer"></div>
+    <canvas id="wheelcanvas" width="400" height="400"></canvas>
     <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
   </div>
 </body>
