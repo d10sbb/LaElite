@@ -113,9 +113,9 @@
 
       function setupAdmin() {
         const userInputs = document.getElementById("userInputs");
-        userInputs.innerHTML = `<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>`;
+        userInputs.innerHTML = <label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>;
         for (let i = 0; i < 10; i++) {
-          userInputs.innerHTML += `<div><input type='text' placeholder='Nombre' id='user${i}'><input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>`;
+          userInputs.innerHTML += <div><input type='text' placeholder='Nombre' id='user${i}'><input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>;
         }
       }
 
@@ -156,8 +156,8 @@
         let participants = [];
         let participantInfo = [];
         for (let i = 0; i < 10; i++) {
-          let name = document.getElementById(`user${i}`).value.trim();
-          let percentage = parseFloat(document.getElementById(`perc${i}`).value);
+          let name = document.getElementById(user${i}).value.trim();
+          let percentage = parseFloat(document.getElementById(perc${i}).value);
           if (name && !isNaN(percentage) && percentage > 0) {
             participantInfo.push({ name, percentage });
             for (let j = 0; j < percentage * 10; j++) {
@@ -189,7 +189,7 @@
 
       function watchCountdown() {
         onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-          countdownDisplay.innerText = snapshot.val() ? `⏳ Tiempo restante: ${snapshot.val()} s` : "⏳ Tiempo restante: -- s";
+          countdownDisplay.innerText = snapshot.val() ? ⏳ Tiempo restante: ${snapshot.val()} s : "⏳ Tiempo restante: -- s";
         });
       }
 
@@ -197,7 +197,7 @@
         onValue(ref(db, "sorteo/participants"), (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
-            participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
+            participantList.innerHTML = data.map(p => <p>${p.name} - ${p.percentage}%</p>).join('');
             participantList.style.display = "block";
           } else {
             participantList.innerHTML = "";
@@ -207,61 +207,54 @@
       }
 
       function launchWheel(winnerName) {
-        onValue(ref(db, "sorteo/participants"), (snapshot) => {
-          if (!snapshot.exists()) return;
-          const participants = snapshot.val();
-      
-          // Crear lista de segmentos repetidos según porcentaje
-          const repeatedSegments = [];
-          participants.forEach(p => {
-            const repetitions = Math.round(p.percentage * 10); // Puedes ajustar el factor
-            for (let i = 0; i < repetitions; i++) {
-              repeatedSegments.push({
+            onValue(ref(db, "sorteo/participants"), (snapshot) => {
+              if (!snapshot.exists()) return;
+              const participants = snapshot.val();
+
+              const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+
+              const segmentValues = participants.map(p => ({
+                fillStyle: getRandomColor(),
                 text: p.name,
-                fillStyle: getRandomColor()
+                size: (p.percentage / total) * 360
+              }));
+
+              document.getElementById("wheelContainer").style.display = "block";
+
+              // Creamos la rueda sin iniciar animación aún
+              wheel = new Winwheel({
+                canvasId: "wheelcanvas",
+                drawMode: 'segment',
+                numSegments: segmentValues.length,
+                segments: segmentValues,
+                animation: {
+                  type: "spinToStop",
+                  duration: 7,
+                  spins: 8,
+                  callbackFinished: () => {
+                    winnerDisplay.innerText = `\n🎉 Ganador: ${winnerName} 🎉`;
+                    winnerDisplay.classList.add("animate-winner");
+                  }
+                }
               });
-            }
-          });
-      
-          if (repeatedSegments.length === 0) return;
-      
-          document.getElementById("wheelContainer").style.display = "block";
-      
-          // Crear ruleta con segmentos iguales
-          wheel = new Winwheel({
-            canvasId: "wheelcanvas",
-            numSegments: repeatedSegments.length,
-            segments: repeatedSegments,
-            animation: {
-              type: "spinToStop",
-              duration: 7,
-              spins: 8,
-              callbackFinished: () => {
-                winnerDisplay.innerText = `\n🎉 Ganador: ${winnerName} 🎉`;
-                winnerDisplay.classList.add("animate-winner");
+
+              // Calcular ángulo de parada para el ganador
+              let cumulativeAngle = 0;
+              let stopAngle = 0;
+
+              for (const seg of segmentValues) {
+                const midAngle = cumulativeAngle + seg.size / 2;
+                if (seg.text === winnerName) {
+                  stopAngle = 360 - midAngle; // Girar sentido horario desde arriba
+                  break;
+                }
+                cumulativeAngle += seg.size;
               }
-            }
-          });
-      
-          // Calcular en qué índice aparece el ganador (al azar entre los repetidos)
-          const winnerIndexes = repeatedSegments
-            .map((seg, index) => seg.text === winnerName ? index : -1)
-            .filter(i => i !== -1);
-      
-          if (winnerIndexes.length === 0) return;
-      
-          const selectedIndex = winnerIndexes[Math.floor(Math.random() * winnerIndexes.length)];
-      
-          // Calcular el ángulo del segmento
-          const segmentAngle = 360 / repeatedSegments.length;
-          const stopAngle = (360 - (selectedIndex * segmentAngle) + (segmentAngle / 2) + 90) % 360;
-      
-          wheel.animation.stopAngle = stopAngle;
-          wheel.startAnimation();
-        }, { onlyOnce: true });
-      }
 
-
+              wheel.animation.stopAngle = stopAngle;
+              wheel.startAnimation();
+            }, { onlyOnce: true });
+          }
       function getRandomColor() {
         const letters = '789ABCD';
         let color = '#';
