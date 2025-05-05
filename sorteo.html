@@ -211,21 +211,27 @@
           if (!snapshot.exists()) return;
           const participants = snapshot.val();
       
-          const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+          // Crear lista de segmentos repetidos según porcentaje
+          const repeatedSegments = [];
+          participants.forEach(p => {
+            const repetitions = Math.round(p.percentage * 10); // Puedes ajustar el factor
+            for (let i = 0; i < repetitions; i++) {
+              repeatedSegments.push({
+                text: p.name,
+                fillStyle: getRandomColor()
+              });
+            }
+          });
       
-          const segmentValues = participants.map(p => ({
-            fillStyle: getRandomColor(),
-            text: p.name,
-            size: (p.percentage / total) * 360
-          }));
+          if (repeatedSegments.length === 0) return;
       
           document.getElementById("wheelContainer").style.display = "block";
       
+          // Crear ruleta con segmentos iguales
           wheel = new Winwheel({
             canvasId: "wheelcanvas",
-            drawMode: 'segment',
-            numSegments: segmentValues.length,
-            segments: segmentValues,
+            numSegments: repeatedSegments.length,
+            segments: repeatedSegments,
             animation: {
               type: "spinToStop",
               duration: 7,
@@ -237,23 +243,24 @@
             }
           });
       
-          // Calcular ángulo de parada para el ganador
-          let cumulative = 0;
-          let stopAtAngle = 0;
-          for (const seg of segmentValues) {
-            const midAngle = cumulative + seg.size / 2;
-            if (seg.text === winnerName) {
-              stopAtAngle = (360 - midAngle + 90) % 360; // +90 porque el puntero está en la parte superior (90°)
-              break;
-            }
-            cumulative += seg.size;
-          }
-          
-          wheel.animation.stopAngle = stopAtAngle;
-
+          // Calcular en qué índice aparece el ganador (al azar entre los repetidos)
+          const winnerIndexes = repeatedSegments
+            .map((seg, index) => seg.text === winnerName ? index : -1)
+            .filter(i => i !== -1);
+      
+          if (winnerIndexes.length === 0) return;
+      
+          const selectedIndex = winnerIndexes[Math.floor(Math.random() * winnerIndexes.length)];
+      
+          // Calcular el ángulo del segmento
+          const segmentAngle = 360 / repeatedSegments.length;
+          const stopAngle = (360 - (selectedIndex * segmentAngle) + (segmentAngle / 2) + 90) % 360;
+      
+          wheel.animation.stopAngle = stopAngle;
           wheel.startAnimation();
         }, { onlyOnce: true });
       }
+
 
       function getRandomColor() {
         const letters = '789ABCD';
