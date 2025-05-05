@@ -207,8 +207,13 @@
         });
       }
 
+      let wheelStarted = false;
+
       function launchWheel(winnerName) {
-        onValue(ref(db, "sorteo/participants"), (snapshot) => {
+        if (wheelStarted) return; // Previene múltiples ejecuciones
+        wheelStarted = true;
+      
+        get(ref(db, "sorteo/participants")).then(snapshot => {
           if (!snapshot.exists()) return;
           const participants = snapshot.val();
       
@@ -238,7 +243,7 @@
             }
           });
       
-          // Calcular ángulo de parada para el ganador
+          // Calcular ángulo de parada ajustando 180° por el puntero invertido
           let cumulative = 0;
           let winnerAngle = 0;
           for (const seg of segmentValues) {
@@ -249,10 +254,13 @@
             cumulative += seg.size;
           }
       
-          wheel.animation.stopAngle = (360 - winnerAngle) % 360;
+          // Compensar la rotación del puntero
+          wheel.animation.stopAngle = (360 - winnerAngle + 180) % 360;
+      
           wheel.startAnimation();
-        }, { onlyOnce: true });
+        });
       }
+
 
       function getRandomColor() {
         const letters = '789ABCD';
