@@ -41,7 +41,6 @@
     }
   </style>
 
-  <!-- Librerías para la ruleta -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/zarocknz/javascript-winwheel@2.7.0/Winwheel.min.js"></script>
 
@@ -72,6 +71,7 @@
       const isAdmin = location.search.includes("admin");
       const adminDiv = document.getElementById("admin");
       const loginContainer = document.getElementById("loginContainer");
+      const viewerDiv = document.getElementById("viewer");
       const winnerDisplay = document.getElementById("winnerDisplay");
       const participantList = document.getElementById("participantList");
       const countdownDisplay = document.getElementById("countdown");
@@ -85,11 +85,13 @@
             adminDiv.style.display = "block";
             loginContainer.style.display = "none";
             setupAdmin();
+            wheelContainer.style.display = "none"; // Oculta ruleta en modo admin
           } else {
             loginContainer.style.display = "block";
           }
         });
       } else {
+        viewerDiv.style.display = "block";
         watchWinner();
         watchCountdown();
         watchParticipants();
@@ -117,8 +119,8 @@
         }
       }
 
-      startButton?.addEventListener("click", startCountdown);
-      resetButton?.addEventListener("click", resetDraw);
+      startButton.addEventListener("click", startCountdown);
+      resetButton.addEventListener("click", resetDraw);
 
       function resetDraw() {
         remove(ref(db, "sorteo/ganador"));
@@ -145,40 +147,34 @@
             set(ref(db, "sorteo/countdown"), timeLeft);
           } else {
             clearInterval(countdownTimer);
-            startDraw();
           }
         }, 1000);
       }
 
       function startDraw() {
-        let participants = [];
         let participantInfo = [];
         for (let i = 0; i < 10; i++) {
           let name = document.getElementById(`user${i}`).value.trim();
           let percentage = parseFloat(document.getElementById(`perc${i}`).value);
           if (name && !isNaN(percentage) && percentage > 0) {
             participantInfo.push({ name, percentage });
-            for (let j = 0; j < percentage * 10; j++) {
-              participants.push(name);
-            }
           }
         }
 
-        if (participants.length === 0) {
+        if (participantInfo.length === 0) {
           alert("Ingresa datos válidos en los campos.");
           return;
         }
 
         set(ref(db, "sorteo/participants"), participantInfo);
-        let winner = participants[Math.floor(Math.random() * participants.length)];
-        set(ref(db, "sorteo/ganador"), winner);
       }
 
       function watchWinner() {
         onValue(ref(db, "sorteo/ganador"), (snapshot) => {
           const winner = snapshot.val();
           if (winner) {
-            animateWheelWithWinner(winner);
+            winnerDisplay.innerText = `\n🎉 Ganador: ${winner} 🎉`;
+            winnerDisplay.classList.add("animate-winner");
           } else {
             winnerDisplay.innerText = "Esperando el sorteo...";
           }
@@ -187,7 +183,18 @@
 
       function watchCountdown() {
         onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-          countdownDisplay.innerText = snapshot.val() ? `⏳ Tiempo restante: ${snapshot.val()} s` : "⏳ Tiempo restante: -- s";
+          const value = snapshot.val();
+          countdownDisplay.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
+
+          if (value === 0 && !isAdmin) {
+            setTimeout(() => {
+              onValue(ref(db, "sorteo/participants"), (snap) => {
+                if (snap.exists()) {
+                  launchWheelAndPickWinner(snap.val());
+                }
+              }, { onlyOnce: true });
+            }, 500);
+          }
         });
       }
 
@@ -204,48 +211,36 @@
         });
       }
 
-      function animateWheelWithWinner(winnerName) {
-        onValue(ref(db, "sorteo/participants"), (snapshot) => {
-          if (!snapshot.exists()) return;
-          const participants = snapshot.val();
-          const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-          const segmentValues = participants.map(p => ({
-            fillStyle: getRandomColor(),
-            text: p.name,
-            size: (p.percentage / total) * 360
-          }));
+      function launchWheelAndPickWinner(participants) {
+        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+        const segmentValues = participants.map(p => ({
+          fillStyle: getRandomColor(),
+          text: p.name,
+          size: (p.percentage / total) * 360
+        }));
 
-          document.getElementById("wheelContainer").style.display = "block";
+        wheelContainer.style.display = "block";
 
-          wheel = new Winwheel({
-            canvasId: "wheelcanvas",
-            drawMode: 'segment',
-            numSegments: segmentValues.length,
-            segments: segmentValues,
-            animation: {
-              type: "spinToStop",
-              duration: 7,
-              spins: 8,
-              callbackFinished: () => {
-                winnerDisplay.innerText = `🎉 Ganador: ${winnerName} 🎉`;
-                winnerDisplay.classList.add("animate-winner");
-              }
+        wheel = new Winwheel({
+          canvasId: "wheelcanvas",
+          drawMode: 'segment',
+          numSegments: segmentValues.length,
+          segments: segmentValues,
+          animation: {
+            type: "spinToStop",
+            duration: 7,
+            spins: 8,
+            callbackFinished: () => {
+              const indicatedSegment = wheel.getIndicatedSegment();
+              const winnerName = indicatedSegment.text;
+              winnerDisplay.innerText = `\n🎉 Ganador: ${winnerName} 🎉`;
+              winnerDisplay.classList.add("animate-winner");
+              set(ref(db, "sorteo/ganador"), winnerName);
             }
-          });
-
-          let cumulative = 0;
-          let winnerAngle = 0;
-          for (const seg of segmentValues) {
-            if (seg.text === winnerName) {
-              winnerAngle = cumulative + (seg.size / 2);
-              break;
-            }
-            cumulative += seg.size;
           }
+        });
 
-          wheel.animation.stopAngle = (360 - winnerAngle) % 360;
-          wheel.startAnimation();
-        }, { onlyOnce: true });
+        wheel.startAnimation();
       }
 
       function getRandomColor() {
