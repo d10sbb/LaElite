@@ -119,7 +119,11 @@
         }
       }
 
-      startButton.addEventListener("click", startCountdown);
+      startButton.addEventListener("click", () => {
+        startDraw();        // Esto guarda los participantes en Firebase
+        startCountdown();   // Esto empieza la cuenta atrás
+      });
+
       resetButton.addEventListener("click", resetDraw);
 
       function resetDraw() {
