@@ -239,16 +239,18 @@
       
           // Calcular ángulo de parada para el ganador
           let cumulative = 0;
-          let winnerAngle = 0;
+          let stopAtAngle = 0;
           for (const seg of segmentValues) {
+            const midAngle = cumulative + seg.size / 2;
             if (seg.text === winnerName) {
-              winnerAngle = cumulative + (seg.size / 2);
+              stopAtAngle = (360 - midAngle + 90) % 360; // +90 porque el puntero está en la parte superior (90°)
               break;
             }
             cumulative += seg.size;
           }
-      
-          wheel.animation.stopAngle = (360 - winnerAngle) % 360;
+          
+          wheel.animation.stopAngle = stopAtAngle;
+
           wheel.startAnimation();
         }, { onlyOnce: true });
       }
