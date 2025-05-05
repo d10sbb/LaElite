@@ -160,35 +160,25 @@
                 set(ref(db, "sorteo/ganador"), winner);
             }
 
-            function getStopAngle(segments, winner) {
-                const indexes = segments.map((s, i) => s.text === winner ? i : -1).filter(i => i !== -1);
-                const chosenIndex = indexes[Math.floor(indexes.length / 2)];
-                const anglePerSegment = 360 / segments.length;
-                const stopAngle = 360 - (chosenIndex * anglePerSegment + anglePerSegment / 2);
-                return stopAngle;
-            }
-
             function watchWinner() {
                 onValue(ref(db, "sorteo/ganador"), (snapshot) => {
                     const winner = snapshot.val();
                     if (winner && wheel) {
-                        winnerDisplay.innerText = `\n\n🎉 Ganador: ${winner} 🎉`;
-            
-                        // Calcular ángulo de parada y girar ruleta
+                        winnerDisplay.innerText = `\n🎉 Ganador: ${winner} 🎉`;
                         const segments = wheel.segments;
-                        const indexes = segments.map((s, i) => s.text === winner ? i : -1).filter(i => i !== -1);
-                        const chosenIndex = indexes[Math.floor(indexes.length / 2)];
-                        const anglePerSegment = 360 / segments.length;
-                        const stopAngle = 360 - (chosenIndex * anglePerSegment + anglePerSegment / 2);
-            
-                        wheel.animation.stopAngle = stopAngle;
-                        wheel.startAnimation();
+                        const matchingIndices = segments.map((s, i) => s.text === winner ? i : -1).filter(i => i !== -1);
+                        if (matchingIndices.length > 0) {
+                            const chosenIndex = matchingIndices[Math.floor(matchingIndices.length / 2)];
+                            const anglePerSegment = 360 / segments.length;
+                            const stopAngle = 360 - (chosenIndex * anglePerSegment + anglePerSegment / 2);
+                            wheel.animation.stopAngle = stopAngle;
+                            wheel.startAnimation();
+                        }
                     } else if (!winner) {
                         winnerDisplay.innerText = "Esperando el sorteo...";
                     }
                 });
             }
-
 
             function watchCountdown() {
                 onValue(ref(db, "sorteo/countdown"), (snapshot) => {
@@ -202,11 +192,12 @@
                     if (data) {
                         participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
                         participantList.style.display = "block";
-            
-                        // Crear segmentos según porcentaje
+                        wheelContainer.style.display = "block";
+                        pointer.style.display = "block";
+
                         const segments = [];
                         data.forEach(p => {
-                            const count = Math.round(p.percentage);
+                            const count = Math.max(1, Math.round(p.percentage));
                             for (let i = 0; i < count; i++) {
                                 segments.push({
                                     fillStyle: '#' + Math.floor(Math.random()*16777215).toString(16),
@@ -214,22 +205,20 @@
                                 });
                             }
                         });
-            
-                        // Crear y mostrar la ruleta
-                        wheel = new Winwheel({
-                            canvasId: 'canvas',
-                            numSegments: segments.length,
-                            segments: segments,
-                            animation: {
-                                type: 'spinToStop',
-                                duration: 5,
-                                spins: 8,
-                                callbackFinished: () => {}
-                            }
-                        });
-            
-                        wheelContainer.style.display = "block";
-                        pointer.style.display = "block";
+
+                        if (segments.length > 0) {
+                            wheel = new Winwheel({
+                                canvasId: 'canvas',
+                                numSegments: segments.length,
+                                segments: segments,
+                                animation: {
+                                    type: 'spinToStop',
+                                    duration: 5,
+                                    spins: 8,
+                                    callbackFinished: () => {}
+                                }
+                            });
+                        }
                     } else {
                         participantList.innerHTML = "";
                         participantList.style.display = "none";
@@ -238,7 +227,6 @@
                     }
                 });
             }
-
         });
     </script>
 </head>
