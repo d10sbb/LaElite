@@ -207,18 +207,22 @@
                         });
 
                         if (segments.length > 0) {
-                            wheel = new Winwheel({
-                                canvasId: 'canvas',
-                                numSegments: segments.length,
-                                segments: segments,
-                                animation: {
-                                    type: 'spinToStop',
-                                    duration: 5,
-                                    spins: 8,
-                                    callbackFinished: () => {}
-                                }
-                            });
+                            // Espera brevemente para asegurarse de que el canvas está visible y renderizado
+                            setTimeout(() => {
+                                wheel = new Winwheel({
+                                    canvasId: 'canvas',
+                                    numSegments: segments.length,
+                                    segments: segments,
+                                    animation: {
+                                        type: 'spinToStop',
+                                        duration: 5,
+                                        spins: 8,
+                                        callbackFinished: () => {}
+                                    }
+                                });
+                            }, 200); // Pequeña pausa para evitar que el canvas esté oculto al inicializar
                         }
+
                     } else {
                         participantList.innerHTML = "";
                         participantList.style.display = "none";
