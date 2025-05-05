@@ -14,7 +14,8 @@
     #wheelContainer {
       position: relative;
       width: 400px;
-      margin: 0 auto;
+      height: 400px;
+      margin: 20px auto;
       display: none;
     }
 
@@ -23,14 +24,13 @@
       height: 0;
       border-left: 20px solid transparent;
       border-right: 20px solid transparent;
-      border-top: 30px solid red; /* Triángulo apuntando hacia abajo */
+      border-bottom: 30px solid red;
       position: absolute;
-      top: -15px; /* Lo ubica justo encima del canvas */
+      top: -30px;
       left: calc(50% - 20px);
       z-index: 10;
+      transform: rotate(180deg);
     }
-
-
 
     @keyframes zoomIn {
       0% { transform: scale(0); opacity: 0; }
@@ -43,10 +43,8 @@
     }
   </style>
 
-  <!-- Librerías para la ruleta -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/zarocknz/javascript-winwheel@2.7.0/Winwheel.min.js"></script>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
@@ -69,6 +67,7 @@
 
     let wheel;
     let countdownTimer;
+    let wheelSpinning = false;
 
     document.addEventListener("DOMContentLoaded", function () {
       const isAdmin = location.search.includes("admin");
@@ -101,7 +100,6 @@
       window.login = function () {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
-
         signInWithEmailAndPassword(auth, email, password)
           .then(() => location.reload())
           .catch((error) => alert("Error en la autenticación: " + error.message));
@@ -133,6 +131,8 @@
         participantList.innerHTML = "";
         participantList.style.display = "none";
         wheelContainer.style.display = "none";
+        wheel = null;
+        wheelSpinning = false;
       }
 
       function startCountdown() {
@@ -161,29 +161,29 @@
           let percentage = parseFloat(document.getElementById(`perc${i}`).value);
           if (name && !isNaN(percentage) && percentage > 0) {
             participantInfo.push({ name, percentage });
-            for (let j = 0; j < percentage * 10; j++) {
-              participants.push(name);
-            }
           }
         }
-
-        if (participants.length === 0) {
+        if (participantInfo.length === 0) {
           alert("Ingresa datos válidos en los campos.");
           return;
         }
-
         set(ref(db, "sorteo/participants"), participantInfo);
-        let winner = participants[Math.floor(Math.random() * participants.length)];
+
+        let pool = [];
+        participantInfo.forEach(p => {
+          for (let i = 0; i < p.percentage * 10; i++) {
+            pool.push(p.name);
+          }
+        });
+        let winner = pool[Math.floor(Math.random() * pool.length)];
         set(ref(db, "sorteo/ganador"), winner);
       }
 
       function watchWinner() {
         onValue(ref(db, "sorteo/ganador"), (snapshot) => {
           const winner = snapshot.val();
-          if (winner) {
+          if (winner && !wheelSpinning) {
             launchWheel(winner);
-          } else {
-            winnerDisplay.innerText = "Esperando el sorteo...";
           }
         });
       }
@@ -207,60 +207,45 @@
         });
       }
 
-      let wheelStarted = false;
-
       function launchWheel(winnerName) {
-        if (wheelStarted) return; // Previene múltiples ejecuciones
-        wheelStarted = true;
-      
-        get(ref(db, "sorteo/participants")).then(snapshot => {
+        onValue(ref(db, "sorteo/participants"), (snapshot) => {
           if (!snapshot.exists()) return;
-          const participants = snapshot.val();
-      
-          const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-      
-          const segmentValues = participants.map(p => ({
-            fillStyle: getRandomColor(),
+          const data = snapshot.val();
+          const total = data.reduce((sum, p) => sum + p.percentage, 0);
+
+          const segments = data.map(p => ({
             text: p.name,
+            fillStyle: getRandomColor(),
             size: (p.percentage / total) * 360
           }));
-      
-          document.getElementById("wheelContainer").style.display = "block";
-      
+
+          const winnerIndex = segments.findIndex(s => s.text === winnerName);
+          let angleOffset = segments.slice(0, winnerIndex).reduce((sum, seg) => sum + seg.size, 0);
+          let stopAngle = (360 - (angleOffset + segments[winnerIndex].size / 2)) % 360;
+
           wheel = new Winwheel({
-            canvasId: "wheelcanvas",
+            canvasId: 'wheelcanvas',
             drawMode: 'segment',
-            numSegments: segmentValues.length,
-            segments: segmentValues,
+            numSegments: segments.length,
+            segments: segments,
             animation: {
-              type: "spinToStop",
+              type: 'spinToStop',
               duration: 7,
-              spins: 8,
+              spins: 6,
+              stopAngle: stopAngle,
               callbackFinished: () => {
                 winnerDisplay.innerText = `\n🎉 Ganador: ${winnerName} 🎉`;
                 winnerDisplay.classList.add("animate-winner");
+                wheelSpinning = false;
               }
             }
           });
-      
-          // Calcular ángulo de parada ajustando 180° por el puntero invertido
-          let cumulative = 0;
-          let winnerAngle = 0;
-          for (const seg of segmentValues) {
-            if (seg.text === winnerName) {
-              winnerAngle = cumulative + (seg.size / 2);
-              break;
-            }
-            cumulative += seg.size;
-          }
-      
-          // Compensar la rotación del puntero
-          wheel.animation.stopAngle = (360 - winnerAngle + 180) % 360;
-      
-          wheel.startAnimation();
-        });
-      }
 
+          document.getElementById("wheelContainer").style.display = "block";
+          wheel.startAnimation();
+          wheelSpinning = true;
+        }, { onlyOnce: true });
+      }
 
       function getRandomColor() {
         const letters = '789ABCD';
@@ -292,11 +277,10 @@
     <h2> ~ ★ Clan La Élite ★ ~ </h2>
     <p id="countdown" class="countdown">⏳ Tiempo restante: -- s</p>
     <div id="participantList" class="participant-list"></div>
-    <div id="wheelContainer" style="position: relative; display: none;">
+    <div id="wheelContainer">
       <div class="pointer"></div>
       <canvas id="wheelcanvas" width="400" height="400"></canvas>
     </div>
-
     <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
   </div>
 </body>
