@@ -23,12 +23,13 @@
       height: 0;
       border-left: 20px solid transparent;
       border-right: 20px solid transparent;
-      border-bottom: 30px solid red;
+      border-top: 30px solid red;
       position: absolute;
-      top: -10px;
+      bottom: -10px;
       left: calc(50% - 20px);
       z-index: 10;
     }
+
 
     @keyframes zoomIn {
       0% { transform: scale(0); opacity: 0; }
@@ -209,19 +210,22 @@
         onValue(ref(db, "sorteo/participants"), (snapshot) => {
           if (!snapshot.exists()) return;
           const participants = snapshot.val();
-
+      
           const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-          const segments = participants.map(p => ({
+      
+          const segmentValues = participants.map(p => ({
             fillStyle: getRandomColor(),
             text: p.name,
             size: (p.percentage / total) * 360
           }));
-
+      
           document.getElementById("wheelContainer").style.display = "block";
-
+      
           wheel = new Winwheel({
             canvasId: "wheelcanvas",
-            segments: segments,
+            drawMode: 'segment',
+            numSegments: segmentValues.length,
+            segments: segmentValues,
             animation: {
               type: "spinToStop",
               duration: 7,
@@ -232,18 +236,18 @@
               }
             }
           });
-
-          // Calcular ángulo de parada
+      
+          // Calcular ángulo de parada para el ganador
           let cumulative = 0;
           let winnerAngle = 0;
-          for (const seg of segments) {
+          for (const seg of segmentValues) {
             if (seg.text === winnerName) {
               winnerAngle = cumulative + (seg.size / 2);
               break;
             }
             cumulative += seg.size;
           }
-
+      
           wheel.animation.stopAngle = (360 - winnerAngle) % 360;
           wheel.startAnimation();
         }, { onlyOnce: true });
