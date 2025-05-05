@@ -23,12 +23,13 @@
       height: 0;
       border-left: 20px solid transparent;
       border-right: 20px solid transparent;
-      border-top: 30px solid red;
+      border-top: 30px solid red; /* Triángulo apuntando hacia abajo */
       position: absolute;
-      bottom: -10px;
+      top: -30px; /* Lo ubica justo encima del canvas */
       left: calc(50% - 20px);
       z-index: 10;
     }
+
 
 
     @keyframes zoomIn {
@@ -283,10 +284,11 @@
     <h2> ~ ★ Clan La Élite ★ ~ </h2>
     <p id="countdown" class="countdown">⏳ Tiempo restante: -- s</p>
     <div id="participantList" class="participant-list"></div>
-    <div id="wheelContainer">
+    <div id="wheelContainer" style="position: relative; display: none;">
       <div class="pointer"></div>
       <canvas id="wheelcanvas" width="400" height="400"></canvas>
     </div>
+
     <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
   </div>
 </body>
