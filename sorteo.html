@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sorteo mensual LaÉlite</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
@@ -10,14 +10,7 @@
     .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; }
     .countdown { font-size: 28px; color: red; font-weight: bold; margin-top: 15px; }
     .participant-list { margin-top: 18px; font-size: 18px; display: none; }
-
-    #wheelContainer {
-      position: relative;
-      width: 400px;
-      margin: 0 auto;
-      display: none;
-    }
-
+    #wheelContainer { position: relative; width: 400px; margin: 0 auto; display: none; }
     .pointer {
       width: 0;
       height: 0;
@@ -29,16 +22,12 @@
       left: calc(50% - 20px);
       z-index: 10;
     }
-
     @keyframes zoomIn {
       0% { transform: scale(0); opacity: 0; }
       50% { transform: scale(1.1); opacity: 1; }
       100% { transform: scale(1); opacity: 1; }
     }
-
-    .animate-winner {
-      animation: zoomIn 1s ease-out;
-    }
+    .animate-winner { animation: zoomIn 1s ease-out; }
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
@@ -48,7 +37,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
     import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
-  
+
     const firebaseConfig = {
       apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
       authDomain: "sorteo-ad02e.firebaseapp.com",
@@ -59,16 +48,17 @@
       appId: "1:505337439977:web:8691fb960b65f98ae33278",
       measurementId: "G-ZJP53X41YY"
     };
-  
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth();
     const db = getDatabase(app);
-  
+
     let wheel;
+    let isAdmin = false;
     let countdownTimer;
-  
+
     document.addEventListener("DOMContentLoaded", function () {
-      const isAdmin = location.search.includes("admin");
+      isAdmin = location.search.includes("admin");
       const adminDiv = document.getElementById("admin");
       const loginContainer = document.getElementById("loginContainer");
       const viewerDiv = document.getElementById("viewer");
@@ -78,52 +68,37 @@
       const startButton = document.getElementById("startButton");
       const resetButton = document.getElementById("resetButton");
       const wheelContainer = document.getElementById("wheelContainer");
-  
-      // Este bloque maneja todo
-      onAuthStateChanged(auth, (user) => {
-        if (isAdmin) {
+
+      if (isAdmin) {
+        onAuthStateChanged(auth, (user) => {
           if (user) {
-            showAdminUI();
+            adminDiv.style.display = "block";
+            loginContainer.style.display = "none";
+            setupAdmin();
           } else {
-            showLoginUI();
+            loginContainer.style.display = "block";
           }
-        } else {
-          showViewerUI();
-        }
-      });
-  
-      function showAdminUI() {
-        adminDiv.style.display = "block";
-        loginContainer.style.display = "none";
-        setupAdmin();
-        wheelContainer.style.display = "none";
-      }
-  
-      function showLoginUI() {
-        loginContainer.style.display = "block";
-      }
-  
-      function showViewerUI() {
+        });
+      } else {
         viewerDiv.style.display = "block";
         watchWinner();
         watchCountdown();
         watchParticipants();
       }
-  
+
       window.login = function () {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
-  
         signInWithEmailAndPassword(auth, email, password)
           .then(() => location.reload())
           .catch((error) => alert("Error en la autenticación: " + error.message));
       };
-  
+
       window.logout = function () {
         auth.signOut().then(() => location.reload())
           .catch((error) => alert("Error al cerrar sesión: " + error.message));
       };
-  
+
       function setupAdmin() {
         const userInputs = document.getElementById("userInputs");
         userInputs.innerHTML = `<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>`;
@@ -131,26 +106,25 @@
           userInputs.innerHTML += `<div><input type='text' placeholder='Nombre' id='user${i}'><input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>`;
         }
       }
-  
-      startButton?.addEventListener("click", () => {
+
+      startButton.addEventListener("click", () => {
         startDraw();
         startCountdown();
       });
-  
-      resetButton?.addEventListener("click", resetDraw);
-  
+
+      resetButton.addEventListener("click", resetDraw);
+
       function resetDraw() {
         remove(ref(db, "sorteo/ganador"));
         remove(ref(db, "sorteo/participants"));
         remove(ref(db, "sorteo/countdown"));
-  
         winnerDisplay.innerText = "Aquí aparecerá el ganador";
         countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
         participantList.innerHTML = "";
         participantList.style.display = "none";
         wheelContainer.style.display = "none";
       }
-  
+
       function startCountdown() {
         let timeLeft = parseInt(document.getElementById("countdownInput").value);
         if (isNaN(timeLeft) || timeLeft <= 0) {
@@ -164,10 +138,29 @@
             set(ref(db, "sorteo/countdown"), timeLeft);
           } else {
             clearInterval(countdownTimer);
+            setTimeout(() => {
+              onValue(ref(db, "sorteo/participants"), (snap) => {
+                if (snap.exists()) {
+                  const participants = snap.val();
+                  const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+                  const rand = Math.random() * total;
+                  let acc = 0, winnerName = "", stopAngle = 0;
+                  for (let p of participants) {
+                    acc += p.percentage;
+                    if (rand <= acc) {
+                      winnerName = p.name;
+                      break;
+                    }
+                  }
+                  stopAngle = getAngleForWinner(participants, winnerName);
+                  set(ref(db, "sorteo/ganador"), { name: winnerName, angle: stopAngle });
+                }
+              }, { onlyOnce: true });
+            }, 500);
           }
         }, 1000);
       }
-  
+
       function startDraw() {
         let participantInfo = [];
         for (let i = 0; i < 10; i++) {
@@ -177,34 +170,33 @@
             participantInfo.push({ name, percentage });
           }
         }
-  
         if (participantInfo.length === 0) {
           alert("Ingresa datos válidos en los campos.");
           return;
         }
-  
         set(ref(db, "sorteo/participants"), participantInfo);
       }
-  
+
       function watchWinner() {
         onValue(ref(db, "sorteo/ganador"), (snapshot) => {
-          const winner = snapshot.val();
-          if (winner) {
-            winnerDisplay.innerText = `\n🎉 Ganador: ${winner} 🎉`;
+          const data = snapshot.val();
+          if (data && data.name && typeof data.angle === "number") {
+            winnerDisplay.innerText = `🎉 Ganador: ${data.name} 🎉`;
             winnerDisplay.classList.add("animate-winner");
-  
+
             onValue(ref(db, "sorteo/participants"), (snap) => {
               if (snap.exists()) {
                 const participants = snap.val();
                 const total = participants.reduce((sum, p) => sum + p.percentage, 0);
                 const segmentValues = participants.map(p => ({
-                  fillStyle: getRandomColor(),
+                  fillStyle: getColor(p.name),
                   text: p.name,
                   size: (p.percentage / total) * 360
                 }));
-  
+
+                const wheelContainer = document.getElementById("wheelContainer");
                 wheelContainer.style.display = "block";
-  
+
                 wheel = new Winwheel({
                   canvasId: "wheelcanvas",
                   drawMode: 'segment',
@@ -214,23 +206,24 @@
                     type: "spinToStop",
                     duration: 7,
                     spins: 8,
-                    stopAngle: getAngleForWinner(participants, winner),
+                    stopAngle: data.angle,
+                    callbackFinished: () => { /* nada más que mostrar */ }
                   }
                 });
-  
+
                 wheel.startAnimation();
               }
             }, { onlyOnce: true });
+
           } else {
             winnerDisplay.innerText = "Esperando el sorteo...";
           }
         });
       }
-  
+
       function getAngleForWinner(participants, winnerName) {
         const total = participants.reduce((sum, p) => sum + p.percentage, 0);
         let accumulatedAngle = 0;
-  
         for (let p of participants) {
           const segmentAngle = (p.percentage / total) * 360;
           if (p.name === winnerName) {
@@ -238,32 +231,17 @@
           }
           accumulatedAngle += segmentAngle;
         }
-  
         return 0;
       }
-  
+
       function watchCountdown() {
         onValue(ref(db, "sorteo/countdown"), (snapshot) => {
           const value = snapshot.val();
-          countdownDisplay.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
-  
-          if (value === 0 && !isAdmin) {
-            setTimeout(() => {
-              onValue(ref(db, "sorteo/ganador"), (winnerSnap) => {
-                const existingWinner = winnerSnap.val();
-                if (existingWinner) return;
-  
-                onValue(ref(db, "sorteo/participants"), (snap) => {
-                  if (snap.exists()) {
-                    launchWheelAndPickWinner(snap.val());
-                  }
-                }, { onlyOnce: true });
-              }, { onlyOnce: true });
-            }, 500);
-          }
+          const display = document.getElementById("countdown");
+          display.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
         });
       }
-  
+
       function watchParticipants() {
         onValue(ref(db, "sorteo/participants"), (snapshot) => {
           if (snapshot.exists()) {
@@ -276,50 +254,17 @@
           }
         });
       }
-  
-      function launchWheelAndPickWinner(participants) {
-        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-        const segmentValues = participants.map(p => ({
-          fillStyle: getRandomColor(),
-          text: p.name,
-          size: (p.percentage / total) * 360
-        }));
-  
-        wheelContainer.style.display = "block";
-  
-        wheel = new Winwheel({
-          canvasId: "wheelcanvas",
-          drawMode: 'segment',
-          numSegments: segmentValues.length,
-          segments: segmentValues,
-          animation: {
-            type: "spinToStop",
-            duration: 7,
-            spins: 8,
-            callbackFinished: () => {
-              const indicatedSegment = wheel.getIndicatedSegment();
-              const winnerName = indicatedSegment.text;
-              winnerDisplay.innerText = `\n🎉 Ganador: ${winnerName} 🎉`;
-              winnerDisplay.classList.add("animate-winner");
-              set(ref(db, "sorteo/ganador"), winnerName);
-            }
-          }
-        });
-  
-        wheel.startAnimation();
-      }
-  
-      function getRandomColor() {
-        const letters = '789ABCD';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
-          color += letters[Math.floor(Math.random() * letters.length)];
+
+      function getColor(name) {
+        const colors = ["#f44336", "#2196F3", "#4CAF50", "#FF9800", "#9C27B0", "#00BCD4", "#E91E63", "#8BC34A", "#FFC107", "#3F51B5"];
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+          hash = name.charCodeAt(i) + ((hash << 5) - hash);
         }
-        return color;
+        return colors[Math.abs(hash) % colors.length];
       }
     });
   </script>
-
 </head>
 <body>
   <h1>Sorteo del trofeo del Ranking Mensual de Clanes - BoomBang.TV</h1>
