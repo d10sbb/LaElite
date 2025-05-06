@@ -57,9 +57,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth();
     const db = getDatabase(app);
-
-    let wheel;
-    let countdownTimer;
+    let wheel, countdownTimer;
 
     document.addEventListener("DOMContentLoaded", function () {
       const isAdmin = location.search.includes("admin");
@@ -106,7 +104,7 @@
 
       function setupAdmin() {
         const userInputs = document.getElementById("userInputs");
-        userInputs.innerHTML = '<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>';
+        userInputs.innerHTML = `<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>`;
         for (let i = 0; i < 10; i++) {
           userInputs.innerHTML += `<div><input type='text' placeholder='Nombre' id='user${i}'><input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'></div>`;
         }
@@ -123,12 +121,30 @@
         remove(ref(db, "sorteo/ganador"));
         remove(ref(db, "sorteo/participants"));
         remove(ref(db, "sorteo/countdown"));
-
         winnerDisplay.innerText = "Aquí aparecerá el ganador";
         countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
         participantList.innerHTML = "";
         participantList.style.display = "none";
         wheelContainer.style.display = "none";
+        const canvas = document.getElementById("wheelcanvas");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      function startDraw() {
+        let participantInfo = [];
+        for (let i = 0; i < 10; i++) {
+          let name = document.getElementById(`user${i}`).value.trim();
+          let percentage = parseFloat(document.getElementById(`perc${i}`).value);
+          if (name && !isNaN(percentage) && percentage > 0) {
+            participantInfo.push({ name, percentage });
+          }
+        }
+        if (participantInfo.length === 0) {
+          alert("Ingresa datos válidos en los campos.");
+          return;
+        }
+        set(ref(db, "sorteo/participants"), participantInfo);
       }
 
       function startCountdown() {
@@ -148,54 +164,6 @@
         }, 1000);
       }
 
-      function startDraw() {
-        let participantInfo = [];
-        for (let i = 0; i < 10; i++) {
-          let name = document.getElementById(`user${i}`).value.trim();
-          let percentage = parseFloat(document.getElementById(`perc${i}`).value);
-          if (name && !isNaN(percentage) && percentage > 0) {
-            participantInfo.push({ name, percentage });
-          }
-        }
-
-        if (participantInfo.length === 0) {
-          alert("Ingresa datos válidos en los campos.");
-          return;
-        }
-
-        // Seleccionar ganador según porcentaje
-        const total = participantInfo.reduce((sum, p) => sum + p.percentage, 0);
-        let rand = Math.random() * total;
-        let winner;
-        for (let p of participantInfo) {
-          rand -= p.percentage;
-          if (rand <= 0) {
-            winner = p.name;
-            break;
-          }
-        }
-
-        set(ref(db, "sorteo/participants"), participantInfo);
-        set(ref(db, "sorteo/ganador"), ""); // Limpiar mientras tanto
-        setTimeout(() => {
-          set(ref(db, "sorteo/ganador"), winner);
-        }, 100); // Se publica poco después para que la ruleta la use
-      }
-
-      function watchWinner() {
-        onValue(ref(db, "sorteo/ganador"), (snapshot) => {
-          const winner = snapshot.val();
-          if (winner) {
-            // solo mostrar después del giro de la ruleta
-            if (!isAdmin) {
-              winnerDisplay.innerText = "";
-            }
-          } else {
-            winnerDisplay.innerText = "Esperando el sorteo...";
-          }
-        });
-      }
-
       function watchCountdown() {
         onValue(ref(db, "sorteo/countdown"), (snapshot) => {
           const value = snapshot.val();
@@ -204,11 +172,10 @@
             setTimeout(() => {
               onValue(ref(db, "sorteo/participants"), (snap) => {
                 if (snap.exists()) {
-                  onValue(ref(db, "sorteo/ganador"), (wSnap) => {
-                    if (wSnap.exists()) {
-                      launchWheelAndPickWinner(snap.val(), wSnap.val());
-                    }
-                  }, { onlyOnce: true });
+                  const participants = snap.val();
+                  const winner = weightedRandom(participants);
+                  set(ref(db, "sorteo/ganador"), winner);
+                  launchWheel(participants, winner);
                 }
               }, { onlyOnce: true });
             }, 500);
@@ -229,46 +196,65 @@
         });
       }
 
-      function launchWheelAndPickWinner(participants, winnerName) {
+      function watchWinner() {
+        onValue(ref(db, "sorteo/ganador"), (snapshot) => {
+          const winner = snapshot.val();
+          if (winner) {
+            onValue(ref(db, "sorteo/participants"), (snap) => {
+              if (snap.exists()) {
+                launchWheel(snap.val(), winner);
+              }
+            }, { onlyOnce: true });
+          } else {
+            winnerDisplay.innerText = "Esperando el sorteo...";
+          }
+        });
+      }
+
+      function weightedRandom(participants) {
         const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-        const segmentValues = participants.map(p => ({
+        const rand = Math.random() * total;
+        let accum = 0;
+        for (let p of participants) {
+          accum += p.percentage;
+          if (rand <= accum) return p.name;
+        }
+        return participants[participants.length - 1].name;
+      }
+
+      function launchWheel(participants, winnerName) {
+        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+        const segments = participants.map(p => ({
           fillStyle: getRandomColor(),
-          text: p.name,
-          size: (p.percentage / total) * 360
+          text: p.name
         }));
 
+        let winnerIndex = participants.findIndex(p => p.name === winnerName);
         wheelContainer.style.display = "block";
+
+        const canvas = document.getElementById("wheelcanvas");
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         wheel = new Winwheel({
           canvasId: "wheelcanvas",
-          drawMode: 'segment',
-          segments: segmentValues,
+          numSegments: segments.length,
+          segments: segments,
           animation: {
             type: "spinToStop",
-            duration: 6,
+            duration: 7,
             spins: 8,
-            stopAngle: calculateStopAngle(participants, winnerName),
-            callbackFinished: () => {
+            callbackFinished: function () {
               winnerDisplay.innerText = `\n🎉 Ganador: ${winnerName} 🎉`;
               winnerDisplay.classList.add("animate-winner");
             }
           }
         });
 
+        const segmentAngle = 360 / segments.length;
+        const stopAngle = segmentAngle * winnerIndex + (Math.random() * segmentAngle);
+        wheel.animation.stopAngle = stopAngle;
         wheel.startAnimation();
-      }
-
-      function calculateStopAngle(participants, winnerName) {
-        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-        let angle = 0;
-        for (let p of participants) {
-          const size = (p.percentage / total) * 360;
-          if (p.name === winnerName) {
-            return angle + Math.random() * size;
-          }
-          angle += size;
-        }
-        return 0; // fallback
       }
 
       function getRandomColor() {
