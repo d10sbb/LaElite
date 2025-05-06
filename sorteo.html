@@ -224,15 +224,22 @@
       function getAngleForWinner(participants, winnerName) {
         const total = participants.reduce((sum, p) => sum + p.percentage, 0);
         let accumulatedAngle = 0;
+      
         for (let p of participants) {
           const segmentAngle = (p.percentage / total) * 360;
           if (p.name === winnerName) {
-            return 360 - (accumulatedAngle + segmentAngle / 2);
+            // Elegimos un ángulo aleatorio dentro del segmento del ganador
+            const min = accumulatedAngle;
+            const max = accumulatedAngle + segmentAngle;
+            const randomWithinSegment = Math.random() * (max - min) + min;
+            return (360 - randomWithinSegment) % 360; // Ajustamos por dirección antihoraria
           }
           accumulatedAngle += segmentAngle;
         }
+      
         return 0;
       }
+
 
       function watchCountdown() {
         onValue(ref(db, "sorteo/countdown"), (snapshot) => {
