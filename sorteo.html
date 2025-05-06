@@ -192,13 +192,24 @@
 
           if (value === 0 && !isAdmin) {
             setTimeout(() => {
-              onValue(ref(db, "sorteo/participants"), (snap) => {
-                if (snap.exists()) {
-                  launchWheelAndPickWinner(snap.val());
+              // Verifica si ya hay un ganador
+              onValue(ref(db, "sorteo/ganador"), (winnerSnap) => {
+                const existingWinner = winnerSnap.val();
+                if (existingWinner) {
+                  // Ya hay un ganador, no hagas nada
+                  return;
                 }
+          
+                // No hay ganador, este cliente puede elegirlo
+                onValue(ref(db, "sorteo/participants"), (snap) => {
+                  if (snap.exists()) {
+                    launchWheelAndPickWinner(snap.val());
+                  }
+                }, { onlyOnce: true });
               }, { onlyOnce: true });
             }, 500);
           }
+
         });
       }
 
