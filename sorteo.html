@@ -79,23 +79,24 @@
       const resetButton = document.getElementById("resetButton");
       const wheelContainer = document.getElementById("wheelContainer");
 
-      if (isAdmin) {
-        onAuthStateChanged(auth, (user) => {
+      onAuthStateChanged(auth, (user) => {
+        if (isAdmin) {
           if (user) {
             adminDiv.style.display = "block";
             loginContainer.style.display = "none";
             setupAdmin();
-            wheelContainer.style.display = "none"; // Oculta ruleta en modo admin
+            wheelContainer.style.display = "none";
           } else {
             loginContainer.style.display = "block";
           }
-        });
-      } else {
-        viewerDiv.style.display = "block";
-        watchWinner();
-        watchCountdown();
-        watchParticipants();
-      }
+        } else {
+          viewerDiv.style.display = "block";
+          watchWinner();
+          watchCountdown();
+          watchParticipants();
+        }
+      });
+
 
       window.login = function () {
         const email = document.getElementById("email").value;
