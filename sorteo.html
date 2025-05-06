@@ -7,7 +7,7 @@
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
     #admin, #loginContainer { display: none; }
-    .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; white-space: pre-line; }
+    .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; }
     .countdown { font-size: 28px; color: red; font-weight: bold; margin-top: 15px; }
     .participant-list { margin-top: 18px; font-size: 18px; display: none; }
 
@@ -43,6 +43,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/zarocknz/javascript-winwheel@2.7.0/Winwheel.min.js"></script>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
@@ -64,7 +65,7 @@
     const db = getDatabase(app);
 
     let wheel;
-    let alreadySpun = false;
+    let countdownTimer;
 
     document.addEventListener("DOMContentLoaded", function () {
       const isAdmin = location.search.includes("admin");
@@ -84,14 +85,15 @@
             adminDiv.style.display = "block";
             loginContainer.style.display = "none";
             setupAdmin();
+            wheelContainer.style.display = "none";
           } else {
             loginContainer.style.display = "block";
           }
         });
       } else {
         viewerDiv.style.display = "block";
-        watchCountdown();
         watchWinner();
+        watchCountdown();
         watchParticipants();
       }
 
@@ -105,7 +107,8 @@
       };
 
       window.logout = function () {
-        auth.signOut().then(() => location.reload());
+        auth.signOut().then(() => location.reload())
+          .catch((error) => alert("Error al cerrar sesión: " + error.message));
       };
 
       function setupAdmin() {
@@ -117,90 +120,162 @@
       }
 
       startButton.addEventListener("click", () => {
-        const participants = [];
-        for (let i = 0; i < 10; i++) {
-          const name = document.getElementById(`user${i}`).value.trim();
-          const perc = parseFloat(document.getElementById(`perc${i}`).value);
-          if (name && !isNaN(perc) && perc > 0) {
-            participants.push({ name, percentage: perc });
-          }
-        }
-        if (participants.length === 0) return alert("Completa los participantes.");
-        set(ref(db, "sorteo/participants"), participants);
-        const countdown = parseInt(document.getElementById("countdownInput").value);
-        if (!isNaN(countdown) && countdown > 0) {
-          set(ref(db, "sorteo/countdown"), countdown);
-        }
+        startDraw();
+        startCountdown();
       });
 
-      resetButton.addEventListener("click", () => {
+      resetButton.addEventListener("click", resetDraw);
+
+      function resetDraw() {
         remove(ref(db, "sorteo/ganador"));
-        remove(ref(db, "sorteo/countdown"));
         remove(ref(db, "sorteo/participants"));
-        location.reload();
-      });
+        remove(ref(db, "sorteo/countdown"));
+
+        winnerDisplay.innerText = "Aquí aparecerá el ganador";
+        countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
+        participantList.innerHTML = "";
+        participantList.style.display = "none";
+        wheelContainer.style.display = "none";
+      }
+
+      function startCountdown() {
+        let timeLeft = parseInt(document.getElementById("countdownInput").value);
+        if (isNaN(timeLeft) || timeLeft <= 0) {
+          alert("Introduce un tiempo válido para la cuenta atrás.");
+          return;
+        }
+        set(ref(db, "sorteo/countdown"), timeLeft);
+        countdownTimer = setInterval(() => {
+          if (timeLeft > 0) {
+            timeLeft--;
+            set(ref(db, "sorteo/countdown"), timeLeft);
+          } else {
+            clearInterval(countdownTimer);
+          }
+        }, 1000);
+      }
+
+      function startDraw() {
+        let participantInfo = [];
+        for (let i = 0; i < 10; i++) {
+          let name = document.getElementById(`user${i}`).value.trim();
+          let percentage = parseFloat(document.getElementById(`perc${i}`).value);
+          if (name && !isNaN(percentage) && percentage > 0) {
+            participantInfo.push({ name, percentage });
+          }
+        }
+
+        if (participantInfo.length === 0) {
+          alert("Ingresa datos válidos en los campos.");
+          return;
+        }
+
+        set(ref(db, "sorteo/participants"), participantInfo);
+      }
+
+      function watchWinner() {
+        onValue(ref(db, "sorteo/ganador"), (snapshot) => {
+          const winnerData = snapshot.val();
+          if (winnerData) {
+            winnerDisplay.innerText = `🎉 Ganador: ${winnerData.name} 🎉`;
+            winnerDisplay.classList.add("animate-winner");
+
+            onValue(ref(db, "sorteo/participants"), (snap) => {
+              if (snap.exists() && !wheel) {
+                const participants = snap.val();
+                const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+                const segmentValues = participants.map(p => ({
+                  fillStyle: getRandomColor(),
+                  text: p.name,
+                  size: (p.percentage / total) * 360
+                }));
+
+                wheelContainer.style.display = "block";
+
+                wheel = new Winwheel({
+                  canvasId: "wheelcanvas",
+                  drawMode: 'segment',
+                  numSegments: segmentValues.length,
+                  segments: segmentValues,
+                  animation: {
+                    type: "spinToStop",
+                    duration: 7,
+                    spins: 8,
+                    stopAngle: null,
+                    callbackFinished: () => {}
+                  }
+                });
+
+                const stopAngle = wheel.getRandomForSegment(winnerData.index + 1);
+                wheel.animation.stopAngle = stopAngle;
+                wheel.startAnimation();
+              }
+            }, { onlyOnce: true });
+          } else {
+            winnerDisplay.innerText = "Esperando el sorteo...";
+          }
+        });
+      }
 
       function watchCountdown() {
         onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-          const time = snapshot.val();
-          countdownDisplay.innerText = time ? `⏳ Tiempo restante: ${time} s` : "⏳ Tiempo restante: -- s";
+          const value = snapshot.val();
+          countdownDisplay.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
 
-          if (time === 0 && !alreadySpun) {
-            alreadySpun = true;
-            onValue(ref(db, "sorteo/ganador"), (snap) => {
-              if (!snap.exists()) {
-                onValue(ref(db, "sorteo/participants"), (psnap) => {
-                  if (psnap.exists()) {
-                    launchWheelAndPickWinner(psnap.val());
-                  }
-                }, { onlyOnce: true });
-              }
-            }, { onlyOnce: true });
+          if (value === 0 && !isAdmin) {
+            setTimeout(() => {
+              onValue(ref(db, "sorteo/participants"), (snap) => {
+                if (snap.exists()) {
+                  launchWheelAndPickWinner(snap.val());
+                }
+              }, { onlyOnce: true });
+            }, 500);
           }
         });
       }
 
       function watchParticipants() {
-        onValue(ref(db, "sorteo/participants"), (snap) => {
-          const data = snap.val();
-          if (data) {
+        onValue(ref(db, "sorteo/participants"), (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.val();
             participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
             participantList.style.display = "block";
-          }
-        });
-      }
-
-      function watchWinner() {
-        onValue(ref(db, "sorteo/ganador"), (snap) => {
-          const winner = snap.val();
-          if (winner) {
-            winnerDisplay.innerText = `\n🎉 Ganador: ${winner} 🎉`;
-            winnerDisplay.classList.add("animate-winner");
+          } else {
+            participantList.innerHTML = "";
+            participantList.style.display = "none";
           }
         });
       }
 
       function launchWheelAndPickWinner(participants) {
         const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-        const segments = participants.map(p => ({
+        const segmentValues = participants.map(p => ({
           fillStyle: getRandomColor(),
           text: p.name,
           size: (p.percentage / total) * 360
         }));
 
         wheelContainer.style.display = "block";
+
         wheel = new Winwheel({
           canvasId: "wheelcanvas",
           drawMode: 'segment',
-          numSegments: segments.length,
-          segments: segments,
+          numSegments: segmentValues.length,
+          segments: segmentValues,
           animation: {
             type: "spinToStop",
             duration: 7,
             spins: 8,
             callbackFinished: () => {
-              const winnerName = wheel.getIndicatedSegment().text;
-              set(ref(db, "sorteo/ganador"), winnerName);
+              const indicatedSegment = wheel.getIndicatedSegment();
+              const winnerIndex = wheel.getIndicatedSegmentNumber() - 1;
+              const winnerData = {
+                name: indicatedSegment.text,
+                index: winnerIndex
+              };
+              winnerDisplay.innerText = `\n🎉 Ganador: ${winnerData.name} 🎉`;
+              winnerDisplay.classList.add("animate-winner");
+              set(ref(db, "sorteo/ganador"), winnerData);
             }
           }
         });
