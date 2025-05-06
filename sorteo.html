@@ -36,7 +36,6 @@
       animation: zoomIn 1s ease-out;
     }
   </style>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/zarocknz/javascript-winwheel@2.7.0/Winwheel.min.js"></script>
   <script type="module">
@@ -61,9 +60,10 @@
 
     let wheel;
     let countdownTimer;
+    let isAdmin;
 
-    document.addEventListener("DOMContentLoaded", function () {
-      const isAdmin = location.search.includes("admin");
+    document.addEventListener("DOMContentLoaded", () => {
+      isAdmin = location.search.includes("admin");
       const adminDiv = document.getElementById("admin");
       const loginContainer = document.getElementById("loginContainer");
       const viewerDiv = document.getElementById("viewer");
@@ -126,7 +126,7 @@
         remove(ref(db, "sorteo/participants"));
         remove(ref(db, "sorteo/countdown"));
         remove(ref(db, "sorteo/wheelConfig"));
-        winnerDisplay.innerText = "Aquí aparecerá el ganador";
+        document.getElementById("winnerDisplay").innerText = "Aquí aparecerá el ganador";
         countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
         participantList.innerHTML = "";
         participantList.style.display = "none";
@@ -164,22 +164,14 @@
           return;
         }
         set(ref(db, "sorteo/participants"), participantInfo);
-        const total = participantInfo.reduce((sum, p) => sum + p.percentage, 0);
-        const segments = participantInfo.map(p => ({ fillStyle: getRandomColor(), text: p.name, size: (p.percentage / total) * 360 }));
-        const winnerSegment = segments[Math.floor(Math.random() * segments.length)];
-        const stopAngle = segments.reduce((acc, seg, idx) => seg.text === winnerSegment.text ? acc + (seg.size / 2) : acc + seg.size, 0);
-        set(ref(db, "sorteo/wheelConfig"), { segments, stopAngle, winner: winnerSegment.text });
-        set(ref(db, "sorteo/ganador"), winnerSegment.text);
       }
 
       function watchWinner() {
         onValue(ref(db, "sorteo/ganador"), (snapshot) => {
           const winner = snapshot.val();
           if (winner) {
-            winnerDisplay.innerText = `\n🎉 Ganador: ${winner} 🎉`;
-            winnerDisplay.classList.add("animate-winner");
-          } else {
-            winnerDisplay.innerText = "Esperando el sorteo...";
+            document.getElementById("winnerDisplay").innerText = `🎉 Ganador: ${winner} 🎉`;
+            document.getElementById("winnerDisplay").classList.add("animate-winner");
           }
         });
       }
@@ -188,6 +180,32 @@
         onValue(ref(db, "sorteo/countdown"), (snapshot) => {
           const value = snapshot.val();
           countdownDisplay.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
+          if (value === 0 && !isAdmin) {
+            setTimeout(() => {
+              onValue(ref(db, "sorteo/participants"), (snap) => {
+                if (snap.exists()) {
+                  const participants = snap.val();
+                  const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+                  const angles = [];
+                  let currentAngle = 0;
+                  for (const p of participants) {
+                    const size = (p.percentage / total) * 360;
+                    angles.push({ ...p, start: currentAngle, end: currentAngle + size });
+                    currentAngle += size;
+                  }
+                  const winnerIndex = Math.floor(Math.random() * angles.length);
+                  const winner = angles[winnerIndex];
+                  const stopAngle = (winner.start + winner.end) / 2;
+                  set(ref(db, "sorteo/wheelConfig"), {
+                    segments: participants,
+                    stopAngle,
+                    winner: winner.name
+                  });
+                  set(ref(db, "sorteo/ganador"), winner.name);
+                }
+              }, { onlyOnce: true });
+            }, 500);
+          }
         });
       }
 
@@ -197,35 +215,43 @@
             const data = snapshot.val();
             participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
             participantList.style.display = "block";
-          } else {
-            participantList.innerHTML = "";
-            participantList.style.display = "none";
           }
         });
       }
 
       function watchWheelConfig() {
         onValue(ref(db, "sorteo/wheelConfig"), (snapshot) => {
-          if (!snapshot.exists()) return;
-          const { segments, stopAngle, winner } = snapshot.val();
-          wheelContainer.style.display = "block";
-          wheel = new Winwheel({
-            canvasId: "wheelcanvas",
-            drawMode: 'segment',
-            segments,
-            animation: {
-              type: "spinToStop",
-              duration: 7,
-              spins: 8,
-              stopAngle: stopAngle,
-              callbackFinished: () => {
-                winnerDisplay.innerText = `\n🎉 Ganador: ${winner} 🎉`;
-                winnerDisplay.classList.add("animate-winner");
-              }
-            }
-          });
-          wheel.startAnimation();
+          if (snapshot.exists()) {
+            const data = snapshot.val();
+            launchWheel(data.segments, data.stopAngle);
+          }
         });
+      }
+
+      function launchWheel(segmentsData, stopAngle) {
+        const total = segmentsData.reduce((sum, p) => sum + p.percentage, 0);
+        const segmentValues = segmentsData.map(p => ({
+          fillStyle: getRandomColor(),
+          text: p.name,
+          size: (p.percentage / total) * 360
+        }));
+        document.getElementById("wheelContainer").style.display = "block";
+        wheel = new Winwheel({
+          canvasId: "wheelcanvas",
+          drawMode: 'segment',
+          numSegments: segmentValues.length,
+          segments: segmentValues,
+          animation: {
+            type: "spinToStop",
+            duration: 7,
+            spins: 8,
+            stopAngle: stopAngle,
+            callbackFinished: () => {
+              // Ya fue mostrado el ganador desde Firebase
+            }
+          }
+        });
+        wheel.startAnimation();
       }
 
       function getRandomColor() {
