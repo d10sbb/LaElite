@@ -1,16 +1,23 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sorteo mensual LaÉlite</title>
   <style>
     body { font-family: Arial, sans-serif; text-align: center; }
     #admin, #loginContainer { display: none; }
-    .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; }
+    .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; white-space: pre-line; }
     .countdown { font-size: 28px; color: red; font-weight: bold; margin-top: 15px; }
     .participant-list { margin-top: 18px; font-size: 18px; display: none; }
-    #wheelContainer { position: relative; width: 400px; margin: 0 auto; display: none; }
+
+    #wheelContainer {
+      position: relative;
+      width: 400px;
+      margin: 0 auto;
+      display: none;
+    }
+
     .pointer {
       width: 0;
       height: 0;
@@ -22,17 +29,20 @@
       left: calc(50% - 20px);
       z-index: 10;
     }
+
     @keyframes zoomIn {
       0% { transform: scale(0); opacity: 0; }
       50% { transform: scale(1.1); opacity: 1; }
       100% { transform: scale(1); opacity: 1; }
     }
-    .animate-winner { animation: zoomIn 1s ease-out; }
+
+    .animate-winner {
+      animation: zoomIn 1s ease-out;
+    }
   </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/zarocknz/javascript-winwheel@2.7.0/Winwheel.min.js"></script>
-
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
@@ -54,11 +64,10 @@
     const db = getDatabase(app);
 
     let wheel;
-    let isAdmin = false;
-    let countdownTimer;
+    let alreadySpun = false;
 
     document.addEventListener("DOMContentLoaded", function () {
-      isAdmin = location.search.includes("admin");
+      const isAdmin = location.search.includes("admin");
       const adminDiv = document.getElementById("admin");
       const loginContainer = document.getElementById("loginContainer");
       const viewerDiv = document.getElementById("viewer");
@@ -81,22 +90,22 @@
         });
       } else {
         viewerDiv.style.display = "block";
-        watchWinner();
         watchCountdown();
+        watchWinner();
         watchParticipants();
       }
 
       window.login = function () {
         const email = document.getElementById("email").value;
         const password = document.getElementById("password").value;
+
         signInWithEmailAndPassword(auth, email, password)
           .then(() => location.reload())
           .catch((error) => alert("Error en la autenticación: " + error.message));
       };
 
       window.logout = function () {
-        auth.signOut().then(() => location.reload())
-          .catch((error) => alert("Error al cerrar sesión: " + error.message));
+        auth.signOut().then(() => location.reload());
       };
 
       function setupAdmin() {
@@ -108,167 +117,104 @@
       }
 
       startButton.addEventListener("click", () => {
-        startDraw();
-        startCountdown();
+        const participants = [];
+        for (let i = 0; i < 10; i++) {
+          const name = document.getElementById(`user${i}`).value.trim();
+          const perc = parseFloat(document.getElementById(`perc${i}`).value);
+          if (name && !isNaN(perc) && perc > 0) {
+            participants.push({ name, percentage: perc });
+          }
+        }
+        if (participants.length === 0) return alert("Completa los participantes.");
+        set(ref(db, "sorteo/participants"), participants);
+        const countdown = parseInt(document.getElementById("countdownInput").value);
+        if (!isNaN(countdown) && countdown > 0) {
+          set(ref(db, "sorteo/countdown"), countdown);
+        }
       });
 
-      resetButton.addEventListener("click", resetDraw);
-
-      function resetDraw() {
+      resetButton.addEventListener("click", () => {
         remove(ref(db, "sorteo/ganador"));
-        remove(ref(db, "sorteo/participants"));
         remove(ref(db, "sorteo/countdown"));
-        winnerDisplay.innerText = "Aquí aparecerá el ganador";
-        countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
-        participantList.innerHTML = "";
-        participantList.style.display = "none";
-        wheelContainer.style.display = "none";
-      }
-
-      function startCountdown() {
-        let timeLeft = parseInt(document.getElementById("countdownInput").value);
-        if (isNaN(timeLeft) || timeLeft <= 0) {
-          alert("Introduce un tiempo válido para la cuenta atrás.");
-          return;
-        }
-        set(ref(db, "sorteo/countdown"), timeLeft);
-        countdownTimer = setInterval(() => {
-          if (timeLeft > 0) {
-            timeLeft--;
-            set(ref(db, "sorteo/countdown"), timeLeft);
-          } else {
-            clearInterval(countdownTimer);
-            setTimeout(() => {
-              onValue(ref(db, "sorteo/participants"), (snap) => {
-                if (snap.exists()) {
-                  const participants = snap.val();
-                  const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-                  const rand = Math.random() * total;
-                  let acc = 0, winnerName = "", stopAngle = 0;
-                  for (let p of participants) {
-                    acc += p.percentage;
-                    if (rand <= acc) {
-                      winnerName = p.name;
-                      break;
-                    }
-                  }
-                  stopAngle = getAngleForWinner(participants, winnerName);
-                  set(ref(db, "sorteo/ganador"), { name: winnerName, angle: stopAngle });
-                }
-              }, { onlyOnce: true });
-            }, 500);
-          }
-        }, 1000);
-      }
-
-      function startDraw() {
-        let participantInfo = [];
-        for (let i = 0; i < 10; i++) {
-          let name = document.getElementById(`user${i}`).value.trim();
-          let percentage = parseFloat(document.getElementById(`perc${i}`).value);
-          if (name && !isNaN(percentage) && percentage > 0) {
-            participantInfo.push({ name, percentage });
-          }
-        }
-        if (participantInfo.length === 0) {
-          alert("Ingresa datos válidos en los campos.");
-          return;
-        }
-        set(ref(db, "sorteo/participants"), participantInfo);
-      }
-
-      function watchWinner() {
-        onValue(ref(db, "sorteo/ganador"), (snapshot) => {
-          const data = snapshot.val();
-          if (data && data.name && typeof data.angle === "number") {
-            winnerDisplay.innerText = `🎉 Ganador: ${data.name} 🎉`;
-            winnerDisplay.classList.add("animate-winner");
-
-            onValue(ref(db, "sorteo/participants"), (snap) => {
-              if (snap.exists()) {
-                const participants = snap.val();
-                const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-                const segmentValues = participants.map(p => ({
-                  fillStyle: getColor(p.name),
-                  text: p.name,
-                  size: (p.percentage / total) * 360
-                }));
-
-                const wheelContainer = document.getElementById("wheelContainer");
-                wheelContainer.style.display = "block";
-
-                wheel = new Winwheel({
-                  canvasId: "wheelcanvas",
-                  drawMode: 'segment',
-                  numSegments: segmentValues.length,
-                  segments: segmentValues,
-                  animation: {
-                    type: "spinToStop",
-                    duration: 7,
-                    spins: 8,
-                    stopAngle: data.angle,
-                    callbackFinished: () => { /* nada más que mostrar */ }
-                  }
-                });
-
-                wheel.startAnimation();
-              }
-            }, { onlyOnce: true });
-
-          } else {
-            winnerDisplay.innerText = "Esperando el sorteo...";
-          }
-        });
-      }
-
-      function getAngleForWinner(participants, winnerName) {
-        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-        let accumulatedAngle = 0;
-      
-        for (let p of participants) {
-          const segmentAngle = (p.percentage / total) * 360;
-          if (p.name === winnerName) {
-            // Elegimos un ángulo aleatorio dentro del segmento del ganador
-            const min = accumulatedAngle;
-            const max = accumulatedAngle + segmentAngle;
-            const randomWithinSegment = Math.random() * (max - min) + min;
-            return (360 - randomWithinSegment) % 360; // Ajustamos por dirección antihoraria
-          }
-          accumulatedAngle += segmentAngle;
-        }
-      
-        return 0;
-      }
-
+        remove(ref(db, "sorteo/participants"));
+        location.reload();
+      });
 
       function watchCountdown() {
         onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-          const value = snapshot.val();
-          const display = document.getElementById("countdown");
-          display.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
+          const time = snapshot.val();
+          countdownDisplay.innerText = time ? `⏳ Tiempo restante: ${time} s` : "⏳ Tiempo restante: -- s";
+
+          if (time === 0 && !alreadySpun) {
+            alreadySpun = true;
+            onValue(ref(db, "sorteo/ganador"), (snap) => {
+              if (!snap.exists()) {
+                onValue(ref(db, "sorteo/participants"), (psnap) => {
+                  if (psnap.exists()) {
+                    launchWheelAndPickWinner(psnap.val());
+                  }
+                }, { onlyOnce: true });
+              }
+            }, { onlyOnce: true });
+          }
         });
       }
 
       function watchParticipants() {
-        onValue(ref(db, "sorteo/participants"), (snapshot) => {
-          if (snapshot.exists()) {
-            const data = snapshot.val();
+        onValue(ref(db, "sorteo/participants"), (snap) => {
+          const data = snap.val();
+          if (data) {
             participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
             participantList.style.display = "block";
-          } else {
-            participantList.innerHTML = "";
-            participantList.style.display = "none";
           }
         });
       }
 
-      function getColor(name) {
-        const colors = ["#f44336", "#2196F3", "#4CAF50", "#FF9800", "#9C27B0", "#00BCD4", "#E91E63", "#8BC34A", "#FFC107", "#3F51B5"];
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-          hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      function watchWinner() {
+        onValue(ref(db, "sorteo/ganador"), (snap) => {
+          const winner = snap.val();
+          if (winner) {
+            winnerDisplay.innerText = `\n🎉 Ganador: ${winner} 🎉`;
+            winnerDisplay.classList.add("animate-winner");
+          }
+        });
+      }
+
+      function launchWheelAndPickWinner(participants) {
+        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+        const segments = participants.map(p => ({
+          fillStyle: getRandomColor(),
+          text: p.name,
+          size: (p.percentage / total) * 360
+        }));
+
+        wheelContainer.style.display = "block";
+        wheel = new Winwheel({
+          canvasId: "wheelcanvas",
+          drawMode: 'segment',
+          numSegments: segments.length,
+          segments: segments,
+          animation: {
+            type: "spinToStop",
+            duration: 7,
+            spins: 8,
+            callbackFinished: () => {
+              const winnerName = wheel.getIndicatedSegment().text;
+              set(ref(db, "sorteo/ganador"), winnerName);
+            }
+          }
+        });
+
+        wheel.startAnimation();
+      }
+
+      function getRandomColor() {
+        const letters = '789ABCD';
+        let color = '#';
+        for (let i = 0; i < 6; i++) {
+          color += letters[Math.floor(Math.random() * letters.length)];
         }
-        return colors[Math.abs(hash) % colors.length];
+        return color;
       }
     });
   </script>
