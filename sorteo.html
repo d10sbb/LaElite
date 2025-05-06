@@ -179,12 +179,63 @@
           if (winner) {
             winnerDisplay.innerText = `\n🎉 Ganador: ${winner} 🎉`;
             winnerDisplay.classList.add("animate-winner");
+          
+            // Ahora gira la ruleta mostrando al ganador
+            onValue(ref(db, "sorteo/participants"), (snap) => {
+              if (snap.exists()) {
+                const participants = snap.val();
+                const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+                const segmentValues = participants.map(p => ({
+                  fillStyle: getRandomColor(), // O usa colores fijos si quieres consistencia
+                  text: p.name,
+                  size: (p.percentage / total) * 360
+                }));
+          
+                wheelContainer.style.display = "block";
+          
+                wheel = new Winwheel({
+                  canvasId: "wheelcanvas",
+                  drawMode: 'segment',
+                  numSegments: segmentValues.length,
+                  segments: segmentValues,
+                  animation: {
+                    type: "spinToStop",
+                    duration: 7,
+                    spins: 8,
+                    stopAngle: getAngleForWinner(participants, winner),
+                    callbackFinished: () => {
+                      // Ya está mostrado el ganador, no hay que volver a guardarlo
+                    }
+                  }
+                });
+          
+                wheel.startAnimation();
+              }
+            }, { onlyOnce: true });
+          }
+
           } else {
             winnerDisplay.innerText = "Esperando el sorteo...";
           }
         });
       }
 
+      function getAngleForWinner(participants, winnerName) {
+        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+        let accumulatedAngle = 0;
+      
+        for (let p of participants) {
+          const segmentAngle = (p.percentage / total) * 360;
+          if (p.name === winnerName) {
+            // Elegimos un punto en el centro del segmento
+            return 360 - (accumulatedAngle + segmentAngle / 2);
+          }
+          accumulatedAngle += segmentAngle;
+        }
+      
+        return 0; // Por si no se encuentra
+      }
+                              
       function watchCountdown() {
         onValue(ref(db, "sorteo/countdown"), (snapshot) => {
           const value = snapshot.val();
