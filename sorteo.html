@@ -169,13 +169,20 @@
             participantInfo.push({ name, percentage });
           }
         }
-
+      
         if (participantInfo.length === 0) {
           alert("Ingresa datos válidos en los campos.");
           return;
         }
-
+      
         set(ref(db, "sorteo/participants"), participantInfo);
+      
+        // Genera y guarda la semilla aleatoria
+        const seed = Math.random();
+        set(ref(db, "sorteo/seed"), seed);
+      
+        // Borra el ganador anterior
+        remove(ref(db, "sorteo/ganador"));
       }
 
       function watchWinner() {
@@ -189,7 +196,7 @@
               }
             }, { onlyOnce: true });
           } else {
-            winnerDisplay.innerText = "Esperando el sorteo...";
+            winnerDisplay.innerText = "Esperando a la finalización del sorteo...";
           }
         });
       }
@@ -198,14 +205,10 @@
         onValue(ref(db, "sorteo/countdown"), (snapshot) => {
           const value = snapshot.val();
           countdownDisplay.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
-
+      
           if (value === 0 && !isAdmin) {
             setTimeout(() => {
-              onValue(ref(db, "sorteo/participants"), (snap) => {
-                if (snap.exists()) {
-                  launchWheelAndPickWinner(snap.val());
-                }
-              }, { onlyOnce: true });
+              watchSeedAndParticipants();
             }, 500);
           }
         });
@@ -224,6 +227,68 @@
         });
       }
 
+      function launchWheelWithSeed(participants, seed) {
+        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+        const segmentValues = participants.map(p => ({
+          fillStyle: getRandomColor(),
+          text: p.name,
+          size: (p.percentage / total) * 360
+        }));
+      
+        wheelContainer.style.display = "block";
+      
+        wheel = new Winwheel({
+          canvasId: "wheelcanvas",
+          drawMode: 'segment',
+          numSegments: segmentValues.length,
+          segments: segmentValues,
+          animation: {
+            type: "spinToStop",
+            duration: 7,
+            spins: 8,
+            callbackFinished: () => {
+              const indicatedSegment = wheel.getIndicatedSegment();
+              const winnerName = indicatedSegment.text;
+              winnerDisplay.innerText = `🎉 Ganador: ${winnerName} 🎉`;
+              winnerDisplay.classList.add("animate-winner");
+              // Guarda el ganador en Firebase solo si no está guardado
+              set(ref(db, "sorteo/ganador"), winnerName);
+            }
+          }
+        });
+      
+        // Calcula el ángulo de parada usando la semilla
+        // El ángulo debe estar entre 0 y 360
+        const stopAngle = seed * 360;
+        wheel.animation.stopAngle = stopAngle;
+        wheel.startAnimation();
+      }
+
+      function watchSeedAndParticipants() {
+        let participants = null;
+        let seed = null;
+      
+        onValue(ref(db, "sorteo/participants"), (snap) => {
+          if (snap.exists()) {
+            participants = snap.val();
+            tryLaunch();
+          }
+        });
+      
+        onValue(ref(db, "sorteo/seed"), (snap) => {
+          if (snap.exists()) {
+            seed = snap.val();
+            tryLaunch();
+          }
+        });
+      
+        function tryLaunch() {
+          if (participants && seed !== null) {
+            launchWheelWithSeed(participants, seed);
+          }
+        }
+      }
+      
       function launchWheelAndPickWinner(participants, winnerNameFromDB = null) {
         const total = participants.reduce((sum, p) => sum + p.percentage, 0);
         const segmentValues = participants.map(p => ({
