@@ -235,6 +235,9 @@
       
         wheelContainer.style.display = "block";
       
+        // Variables para controlar el sonido del clic
+        let lastSoundSegment = null;
+      
         wheel = new Winwheel({
           canvasId: "wheelcanvas",
           drawMode: 'segment',
@@ -250,7 +253,16 @@
               winnerDisplay.innerText = `🎉 Ganador: ${winnerName} 🎉`;
               winnerDisplay.classList.add("animate-winner");
               set(ref(db, "sorteo/ganador"), winnerName);
-            }
+      
+              // Reproducir aplausos al terminar
+              const audioAplausos = document.getElementById("audioAplausos");
+              if (audioAplausos) {
+                audioAplausos.currentTime = 0;
+                audioAplausos.play();
+              }
+            },
+            callbackSound: playClicSound,
+            soundTrigger: "segment"
           }
         });
       
@@ -258,6 +270,15 @@
         const stopAngle = seed * 360;
         wheel.animation.stopAngle = stopAngle;
         wheel.startAnimation();
+      
+        // Función para reproducir el sonido del clic
+        function playClicSound() {
+          const audioClic = document.getElementById("audioClic");
+          if (audioClic) {
+            audioClic.currentTime = 0;
+            audioClic.play();
+          }
+        }
       }
 
       let wheelLaunched = false;
@@ -331,5 +352,7 @@
     </div>
     <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
   </div>
+  <audio id="audioClic" src="clic.mp3" preload="auto"></audio>
+  <audio id="audioAplausos" src="aplausos.mp3" preload="auto"></audio>
 </body>
 </html>
