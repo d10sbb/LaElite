@@ -182,74 +182,46 @@
         onValue(ref(db, "sorteo/ganador"), (snapshot) => {
           const winner = snapshot.val();
           if (winner) {
-            winnerDisplay.innerText = `🎉 Ganador: ${winner} 🎉`;
+            winnerDisplay.innerText = `🎉 Ganador: ${winner.name} 🎉`;
             winnerDisplay.classList.add("animate-winner");
+
+            // Sincronizar ruleta en todos los dispositivos
+            syncWheelWithWinner(winner);
           } else {
             winnerDisplay.innerText = "Esperando el sorteo...";
           }
         });
       }
 
-      function watchCountdown() {
-        onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-          const value = snapshot.val();
-          countdownDisplay.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
-
-          if (value === 0 && !isAdmin) {
-            setTimeout(() => {
-              onValue(ref(db, "sorteo/participants"), (snap) => {
-                if (snap.exists()) {
-                  launchWheelAndPickWinner(snap.val());
-                }
-              }, { onlyOnce: true });
-            }, 500);
-          }
-        });
-      }
-
-      function watchParticipants() {
+      function syncWheelWithWinner(winner) {
         onValue(ref(db, "sorteo/participants"), (snapshot) => {
           if (snapshot.exists()) {
-            const data = snapshot.val();
-            participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
-            participantList.style.display = "block";
-          } else {
-            participantList.innerHTML = "";
-            participantList.style.display = "none";
+            const participants = snapshot.val();
+            const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+            const segmentValues = participants.map(p => ({
+              fillStyle: getRandomColor(),
+              text: p.name,
+              size: (p.percentage / total) * 360
+            }));
+
+            wheelContainer.style.display = "block";
+
+            wheel = new Winwheel({
+              canvasId: "wheelcanvas",
+              drawMode: 'segment',
+              numSegments: segmentValues.length,
+              segments: segmentValues,
+              animation: {
+                type: "spinToStop",
+                duration: 7,
+                spins: 8,
+                stopAngle: winner.angle, // Sincronizar con el ángulo del ganador
+              }
+            });
+
+            wheel.startAnimation();
           }
         });
-      }
-
-      function launchWheelAndPickWinner(participants) {
-        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-        const segmentValues = participants.map(p => ({
-          fillStyle: getRandomColor(),
-          text: p.name,
-          size: (p.percentage / total) * 360
-        }));
-
-        wheelContainer.style.display = "block";
-
-        wheel = new Winwheel({
-          canvasId: "wheelcanvas",
-          drawMode: 'segment',
-          numSegments: segmentValues.length,
-          segments: segmentValues,
-          animation: {
-            type: "spinToStop",
-            duration: 7,
-            spins: 8,
-            callbackFinished: () => {
-              const indicatedSegment = wheel.getIndicatedSegment();
-              const winnerName = indicatedSegment.text;
-              winnerDisplay.innerText = `🎉 Ganador: ${winnerName} 🎉`;
-              winnerDisplay.classList.add("animate-winner");
-              set(ref(db, "sorteo/ganador"), winnerName);
-            }
-          }
-        });
-
-        wheel.startAnimation();
       }
 
       function getRandomColor() {
