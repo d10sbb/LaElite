@@ -288,12 +288,19 @@
       }
 
       function getRandomColor() {
-        const letters = '789ABCD';
-        let color = '#';
-        for (let i = 0; i < 6; i++) {
-          color += letters[Math.floor(Math.random() * letters.length)];
-        }
-        return color;
+        const vibrantColors = [
+          '#FF5733', // rojo vivo
+          '#FFBD33', // naranja
+          '#DBFF33', // amarillo
+          '#75FF33', // verde lima
+          '#33FF57', // verde
+          '#33FFBD', // turquesa
+          '#33DBFF', // azul claro
+          '#3375FF', // azul
+          '#8E33FF', // violeta
+          '#FF33A8'  // rosa
+        ];
+        return vibrantColors[Math.floor(Math.random() * vibrantColors.length)];
       }
     });
   </script>
