@@ -251,18 +251,18 @@
               const winnerName = indicatedSegment.text;
               winnerDisplay.innerText = `🎉 Ganador: ${winnerName} 🎉`;
               winnerDisplay.classList.add("animate-winner");
-              // Guarda el ganador en Firebase solo si no está guardado
               set(ref(db, "sorteo/ganador"), winnerName);
             }
           }
         });
       
-        // Calcula el ángulo de parada usando la semilla
-        // El ángulo debe estar entre 0 y 360
+        // Calcula el ángulo de parada usando la semilla (entre 0 y 360)
         const stopAngle = seed * 360;
         wheel.animation.stopAngle = stopAngle;
         wheel.startAnimation();
       }
+
+      let wheelLaunched = false;
 
       function watchSeedAndParticipants() {
         let participants = null;
@@ -283,7 +283,8 @@
         });
       
         function tryLaunch() {
-          if (participants && seed !== null) {
+          if (participants && seed !== null && !wheelLaunched) {
+            wheelLaunched = true;
             launchWheelWithSeed(participants, seed);
           }
         }
