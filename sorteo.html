@@ -47,7 +47,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
-    import { getDatabase, ref, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
@@ -158,17 +158,21 @@
           set(ref(db, "sorteo/countdown"), countdownTime);
 
           countdownTimer = setInterval(() => {
-            update(ref(db, "sorteo"), (snapshot) => {
-              const currentCountdown = snapshot.val();
-              if (currentCountdown > 0) {
-                update(ref(db, "sorteo"), { countdown: currentCountdown - 1 });
-              } else {
-                clearInterval(countdownTimer);
-                spinWheel();
-              }
-            });
+            updateCountdown();
           }, 1000);
         }
+      }
+
+      function updateCountdown() {
+        onValue(ref(db, "sorteo/countdown"), (snapshot) => {
+          const currentCountdown = snapshot.val();
+          if (currentCountdown > 0) {
+            set(ref(db, "sorteo/countdown"), currentCountdown - 1);
+          } else if (currentCountdown === 0) {
+            clearInterval(countdownTimer);
+            spinWheel();
+          }
+        }, { onlyOnce: true });
       }
 
       function watchCountdown() {
