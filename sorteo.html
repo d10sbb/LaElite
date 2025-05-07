@@ -47,9 +47,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
-    import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
-    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
       authDomain: "sorteo-ad02e.firebaseapp.com",
@@ -65,7 +64,7 @@
     const auth = getAuth();
     const db = getDatabase(app);
 
-    let wheel;
+    let countdownTimer;
 
     document.addEventListener("DOMContentLoaded", function () {
       const isAdmin = location.search.includes("admin");
@@ -129,9 +128,8 @@
       resetButton.addEventListener("click", resetDraw);
 
       function resetDraw() {
-        remove(ref(db, "sorteo/ganador"));
-        remove(ref(db, "sorteo/participants"));
-        remove(ref(db, "sorteo/countdown"));
+        clearInterval(countdownTimer);
+        remove(ref(db, "sorteo"));
         winnerDisplay.innerText = "Aquí aparecerá el ganador";
         countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
         participantList.innerHTML = "";
@@ -158,6 +156,16 @@
         const countdownTime = parseInt(document.getElementById("countdownInput").value, 10);
         if (!isNaN(countdownTime) && countdownTime > 0) {
           set(ref(db, "sorteo/countdown"), countdownTime);
+
+          countdownTimer = setInterval(() => {
+            update(ref(db, "sorteo"), {
+              countdown: countdownTime - 1
+            });
+            countdownTime--;
+            if (countdownTime <= 0) {
+              clearInterval(countdownTimer);
+            }
+          }, 1000);
         }
       }
 
