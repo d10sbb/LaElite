@@ -125,8 +125,27 @@
       }
 
       startButton.addEventListener("click", () => {
-        startDraw();        // Esto guarda los participantes en Firebase
-        startCountdown();   // Esto empieza la cuenta atrás
+        // Desbloquear los audios en el primer clic
+        try {
+          const audioClic = document.getElementById("audioClic");
+          const audioAplausos = document.getElementById("audioAplausos");
+          if (audioClic) {
+            audioClic.volume = 1;
+            audioClic.play().then(() => {
+              audioClic.pause();
+              audioClic.currentTime = 0;
+            }).catch(()=>{});
+          }
+          if (audioAplausos) {
+            audioAplausos.volume = 1;
+            audioAplausos.play().then(() => {
+              audioAplausos.pause();
+              audioAplausos.currentTime = 0;
+            }).catch(()=>{});
+          }
+        } catch(e) {}
+        startDraw();
+        startCountdown();
       });
 
       resetButton.addEventListener("click", resetDraw);
