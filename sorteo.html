@@ -173,7 +173,6 @@
           }
         }
       
-        // Permite un pequeño margen de error por decimales
         if (Math.abs(totalPercentage - 100) > 0.01) {
           alert("La suma de los porcentajes debe ser exactamente 100%. Corrige los valores antes de iniciar el sorteo.");
           return;
@@ -184,13 +183,12 @@
           return;
         }
       
-        // Primero guarda los participantes
+        // Solo guarda los participantes
         set(ref(db, "sorteo/participants"), participantInfo).then(() => {
-          // Luego genera y guarda la semilla aleatoria
-          const seed = Math.random();
-          set(ref(db, "sorteo/seed"), seed);
           // Borra el ganador anterior
           remove(ref(db, "sorteo/ganador"));
+          // Borra la semilla anterior
+          remove(ref(db, "sorteo/seed"));
         });
       }
 
@@ -211,7 +209,17 @@
           const value = snapshot.val();
           countdownDisplay.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
       
-          if (value === 0 && !isAdmin) {
+          if (value === 0) {
+            // Solo el admin genera la semilla
+            if (isAdmin) {
+              // Comprueba si ya existe una semilla para evitar duplicados
+              onValue(ref(db, "sorteo/seed"), (snap) => {
+                if (!snap.exists()) {
+                  const seed = Math.random();
+                  set(ref(db, "sorteo/seed"), seed);
+                }
+              }, { onlyOnce: true });
+            }
             setTimeout(() => {
               watchSeedAndParticipants();
             }, 500);
