@@ -66,7 +66,9 @@
 
     let wheel;
     let countdownTimer;
-
+    let wheelLaunched = false;
+    let audioUnlocked = false;
+    
     document.addEventListener("DOMContentLoaded", function () {
       const isAdmin = location.search.includes("admin");
       const adminDiv = document.getElementById("admin");
@@ -125,25 +127,27 @@
       }
 
       startButton.addEventListener("click", () => {
-        // Desbloquear los audios en el primer clic
-        try {
-          const audioClic = document.getElementById("audioClic");
-          const audioAplausos = document.getElementById("audioAplausos");
-          if (audioClic) {
-            audioClic.volume = 1;
-            audioClic.play().then(() => {
-              audioClic.pause();
-              audioClic.currentTime = 0;
-            }).catch(()=>{});
-          }
-          if (audioAplausos) {
-            audioAplausos.volume = 1;
-            audioAplausos.play().then(() => {
-              audioAplausos.pause();
-              audioAplausos.currentTime = 0;
-            }).catch(()=>{});
-          }
-        } catch(e) {}
+        if (!audioUnlocked) {
+          try {
+            const audioClic = document.getElementById("audioClic");
+            const audioAplausos = document.getElementById("audioAplausos");
+            if (audioUnlocked && audioAplausos) {
+              audioClic.volume = 1;
+              audioClic.play().then(() => {
+                audioClic.pause();
+                audioClic.currentTime = 0;
+              }).catch(()=>{});
+            }
+            if (audioAplausos) {
+              audioAplausos.volume = 1;
+              audioAplausos.play().then(() => {
+                audioAplausos.pause();
+                audioAplausos.currentTime = 0;
+              }).catch(()=>{});
+            }
+            audioUnlocked = true; // <-- Aquí marcamos que ya está desbloqueado
+          } catch(e) {}
+        }
         startDraw();
         startCountdown();
       });
@@ -294,8 +298,8 @@
       
         // Función para reproducir el sonido del clic
         function playClicSound() {
+          if (!audioUnlocked) return; // Solo reproduce si el audio está desbloqueado
           const audioClic = document.getElementById("audioClic");
-          console.log("Intentando reproducir clic");
           if (audioClic) {
             audioClic.currentTime = 0;
             audioClic.play();
@@ -376,7 +380,5 @@
   </div>
   <audio id="audioClic" src="clic.mp3" preload="auto"></audio>
   <audio id="audioAplausos" src="aplausos.mp3" preload="auto"></audio>
-  <button onclick="document.getElementById('audioClic').play()">Probar Clic</button>
-  <button onclick="document.getElementById('audioAplausos').play()">Probar Aplausos</button>
 </body>
 </html>
