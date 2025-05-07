@@ -64,6 +64,7 @@
     const auth = getAuth();
     const db = getDatabase(app);
 
+    let wheel;
     let countdownTimer;
 
     document.addEventListener("DOMContentLoaded", function () {
@@ -84,15 +85,16 @@
             adminDiv.style.display = "block";
             loginContainer.style.display = "none";
             setupAdmin();
+            wheelContainer.style.display = "none"; // Oculta ruleta en modo admin
           } else {
             loginContainer.style.display = "block";
           }
         });
       } else {
         viewerDiv.style.display = "block";
-        watchWinnerAndWheel();
-        watchParticipants();
+        watchWinner();
         watchCountdown();
+        watchParticipants();
       }
 
       window.login = function () {
@@ -111,75 +113,102 @@
 
       function setupAdmin() {
         const userInputs = document.getElementById("userInputs");
-        userInputs.innerHTML = `
-          <label>Tiempo de cuenta atrás (segundos): 
-            <input type="number" id="countdownInput" min="5" max="300" value="10">
-          </label><br><br>`;
+        userInputs.innerHTML =
+          '<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>';
         for (let i = 0; i < 10; i++) {
-          userInputs.innerHTML += `
-            <div>
+          userInputs.innerHTML +=
+            `<div>
               <input type='text' placeholder='Nombre' id='user${i}'>
               <input type='number' placeholder='Porcentaje' id='perc${i}' min='0.1' max='100' step='0.1'>
             </div>`;
         }
       }
 
-      startButton.addEventListener("click", startDraw);
+      startButton.addEventListener("click", () => {
+        startDraw();        // Esto guarda los participantes en Firebase
+        startCountdown();   // Esto empieza la cuenta atrás
+      });
+
       resetButton.addEventListener("click", resetDraw);
 
       function resetDraw() {
-        clearInterval(countdownTimer);
-        remove(ref(db, "sorteo"));
+        remove(ref(db, "sorteo/ganador"));
+        remove(ref(db, "sorteo/participants"));
+        remove(ref(db, "sorteo/countdown"));
+
         winnerDisplay.innerText = "Aquí aparecerá el ganador";
         countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
         participantList.innerHTML = "";
+        participantList.style.display = "none";
         wheelContainer.style.display = "none";
       }
 
+      function startCountdown() {
+        let timeLeft = parseInt(document.getElementById("countdownInput").value);
+        if (isNaN(timeLeft) || timeLeft <= 0) {
+          alert("Introduce un tiempo válido para la cuenta atrás.");
+          return;
+        }
+        set(ref(db, "sorteo/countdown"), timeLeft);
+        countdownTimer = setInterval(() => {
+          if (timeLeft > 0) {
+            timeLeft--;
+            set(ref(db, "sorteo/countdown"), timeLeft);
+          } else {
+            clearInterval(countdownTimer);
+          }
+        }, 1000);
+      }
+
       function startDraw() {
-        let participants = [];
+        let participantInfo = [];
         for (let i = 0; i < 10; i++) {
-          const name = document.getElementById(`user${i}`).value.trim();
-          const percentage = parseFloat(document.getElementById(`perc${i}`).value);
+          let name = document.getElementById(`user${i}`).value.trim();
+          let percentage = parseFloat(document.getElementById(`perc${i}`).value);
           if (name && !isNaN(percentage) && percentage > 0) {
-            participants.push({ name, percentage });
+            participantInfo.push({ name, percentage });
           }
         }
 
-        if (participants.length === 0) {
-          alert("Por favor, ingresa datos válidos.");
+        if (participantInfo.length === 0) {
+          alert("Ingresa datos válidos en los campos.");
           return;
         }
 
-        set(ref(db, "sorteo/participants"), participants);
-
-        const countdownTime = parseInt(document.getElementById("countdownInput").value, 10);
-        if (!isNaN(countdownTime) && countdownTime > 0) {
-          set(ref(db, "sorteo/countdown"), countdownTime);
-
-          countdownTimer = setInterval(() => {
-            updateCountdown();
-          }, 1000);
-        }
+        set(ref(db, "sorteo/participants"), participantInfo);
       }
 
-      function updateCountdown() {
-        onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-          const currentCountdown = snapshot.val();
-          if (currentCountdown > 0) {
-            set(ref(db, "sorteo/countdown"), currentCountdown - 1);
-          } else if (currentCountdown === 0) {
-            clearInterval(countdownTimer);
-            spinWheel();
+      function watchWinner() {
+        onValue(ref(db, "sorteo/ganador"), (snapshot) => {
+          const winner = snapshot.val();
+          if (winner) {
+            winnerDisplay.innerText = `\n🎉 Ganador: ${winner} 🎉`;
+            winnerDisplay.classList.add("animate-winner");
+            // Si hay participantes cargados, lanza la ruleta hasta el ganador
+            onValue(ref(db, "sorteo/participants"), (snap) => {
+              if (snap.exists()) {
+                launchWheelAndPickWinner(snap.val(), winner);
+              }
+            }, { onlyOnce: true });
+          } else {
+            winnerDisplay.innerText = "Esperando el sorteo...";
           }
-        }, { onlyOnce: true });
+        });
       }
 
       function watchCountdown() {
         onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-          const timeLeft = snapshot.val();
-          if (timeLeft !== null) {
-            countdownDisplay.innerText = `⏳ Tiempo restante: ${timeLeft} s`;
+          const value = snapshot.val();
+          countdownDisplay.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
+
+          if (value === 0 && !isAdmin) {
+            setTimeout(() => {
+              onValue(ref(db, "sorteo/participants"), (snap) => {
+                if (snap.exists()) {
+                  launchWheelAndPickWinner(snap.val());
+                }
+              }, { onlyOnce: true });
+            }, 500);
           }
         });
       }
@@ -188,7 +217,7 @@
         onValue(ref(db, "sorteo/participants"), (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.val();
-            participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join("");
+            participantList.innerHTML = data.map(p => `<p>${p.name} - ${p.percentage}%</p>`).join('');
             participantList.style.display = "block";
           } else {
             participantList.innerHTML = "";
@@ -197,52 +226,63 @@
         });
       }
 
-      function watchWinnerAndWheel() {
-        onValue(ref(db, "sorteo/ganador"), (snapshot) => {
-          const winnerData = snapshot.val();
-          if (winnerData) {
-            winnerDisplay.innerText = `🎉 Ganador: ${winnerData.name} 🎉`;
-            winnerDisplay.classList.add("animate-winner");
+      function launchWheelAndPickWinner(participants, winnerNameFromDB = null) {
+        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+        const segmentValues = participants.map(p => ({
+          fillStyle: getRandomColor(),
+          text: p.name,
+          size: (p.percentage / total) * 360
+        }));
+      
+        wheelContainer.style.display = "block";
+      
+        wheel = new Winwheel({
+          canvasId: "wheelcanvas",
+          drawMode: 'segment',
+          numSegments: segmentValues.length,
+          segments: segmentValues,
+          animation: {
+            type: "spinToStop",
+            duration: 7,
+            spins: 8,
+            callbackFinished: () => {
+              // No elijas el ganador aquí, solo muestra el nombre
+              winnerDisplay.innerText = `🎉 Ganador: ${winnerNameFromDB} 🎉`;
+              winnerDisplay.classList.add("animate-winner");
+            }
           }
         });
-      }
-
-      function spinWheel() {
-        onValue(ref(db, "sorteo/participants"), (snapshot) => {
-          if (snapshot.exists()) {
-            const participants = snapshot.val();
-
-            const segments = participants.map(p => ({
-              text: p.name,
-              fillStyle: getRandomColor(),
-              size: (p.percentage / 100) * 360
-            }));
-
-            wheelContainer.style.display = "block";
-
-            wheel = new Winwheel({
-              canvasId: "wheelcanvas",
-              numSegments: segments.length,
-              segments: segments,
-              animation: {
-                type: "spinToStop",
-                duration: 7,
-                spins: 8,
-                callbackFinished: (indicatedSegment) => {
-                  const winnerName = indicatedSegment.text;
-                  set(ref(db, "sorteo/ganador"), { name: winnerName });
-                }
-              }
-            });
-
-            wheel.startAnimation();
+      
+        // Si ya hay ganador, gira la ruleta hasta ese nombre
+        if (winnerNameFromDB) {
+          const winnerIndex = segmentValues.findIndex(s => s.text === winnerNameFromDB);
+          const stopAt = wheel.getRandomForSegment(winnerIndex + 1); // Winwheel usa 1-based index
+          wheel.animation.stopAngle = stopAt;
+          wheel.startAnimation();
+        } else {
+          // Si no hay ganador, elige uno aleatorio según el porcentaje
+          const rand = Math.random() * total;
+          let acc = 0, winnerName = null;
+          for (const p of participants) {
+            acc += p.percentage;
+            if (rand <= acc) {
+              winnerName = p.name;
+              break;
+            }
           }
-        });
+          // Guarda el ganador en Firebase
+          set(ref(db, "sorteo/ganador"), winnerName);
+          // Gira la ruleta hasta ese nombre
+          const winnerIndex = segmentValues.findIndex(s => s.text === winnerName);
+          const stopAt = wheel.getRandomForSegment(winnerIndex + 1);
+          wheel.animation.stopAngle = stopAt;
+          wheel.startAnimation();
+        }
       }
 
       function getRandomColor() {
-        const letters = "789ABCD";
-        let color = "#";
+        const letters = '789ABCD';
+        let color = '#';
         for (let i = 0; i < 6; i++) {
           color += letters[Math.floor(Math.random() * letters.length)];
         }
@@ -252,7 +292,7 @@
   </script>
 </head>
 <body>
-  <h1>Sorteo mensual LaÉlite</h1>
+  <h1>Sorteo del trofeo del Ranking Mensual de Clanes - BoomBang.TV</h1>
   <div id="loginContainer">
     <h2>Iniciar Sesión</h2>
     <input type="email" id="email" placeholder="Correo electrónico">
@@ -262,9 +302,9 @@
   <div id="admin">
     <h2>Preparación del sorteo</h2>
     <div id="userInputs"></div>
-    <button id="startButton">Iniciar Sorteo</button>
+    <br><button id="startButton">Iniciar Sorteo</button>
     <button id="resetButton">Borrar Sorteo</button>
-    <button onclick="logout()">Cerrar Sesión</button>
+    <br><button onclick="logout()">Cerrar Sesión</button>
   </div>
   <div id="viewer">
     <h2> ~ ★ Clan La Élite ★ ~ </h2>
