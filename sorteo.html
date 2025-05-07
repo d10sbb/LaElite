@@ -181,6 +181,7 @@
       }
 
       function startDraw() {
+        wheelLaunched = false;
         let participantInfo = [];
         for (let i = 0; i < 10; i++) {
           let name = document.getElementById(`user${i}`).value.trim();
