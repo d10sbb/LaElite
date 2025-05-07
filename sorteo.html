@@ -141,6 +141,7 @@
         participantList.innerHTML = "";
         participantList.style.display = "none";
         wheelContainer.style.display = "none";
+        wheelLaunched = false;
       }
 
       function startCountdown() {
@@ -175,26 +176,22 @@
           return;
         }
       
-        set(ref(db, "sorteo/participants"), participantInfo);
-      
-        // Genera y guarda la semilla aleatoria
-        const seed = Math.random();
-        set(ref(db, "sorteo/seed"), seed);
-      
-        // Borra el ganador anterior
-        remove(ref(db, "sorteo/ganador"));
+        // Primero guarda los participantes
+        set(ref(db, "sorteo/participants"), participantInfo).then(() => {
+          // Luego genera y guarda la semilla aleatoria
+          const seed = Math.random();
+          set(ref(db, "sorteo/seed"), seed);
+          // Borra el ganador anterior
+          remove(ref(db, "sorteo/ganador"));
+        });
       }
 
       function watchWinner() {
         onValue(ref(db, "sorteo/ganador"), (snapshot) => {
           const winner = snapshot.val();
           if (winner) {
-            // No mostrar el nombre aquí, solo lanzar la ruleta
-            onValue(ref(db, "sorteo/participants"), (snap) => {
-              if (snap.exists()) {
-                launchWheelAndPickWinner(snap.val(), winner);
-              }
-            }, { onlyOnce: true });
+            winnerDisplay.innerText = `🎉 Ganador: ${winner} 🎉`;
+            winnerDisplay.classList.add("animate-winner");
           } else {
             winnerDisplay.innerText = "Esperando a la finalización del sorteo...";
           }
@@ -287,60 +284,6 @@
             wheelLaunched = true;
             launchWheelWithSeed(participants, seed);
           }
-        }
-      }
-      
-      function launchWheelAndPickWinner(participants, winnerNameFromDB = null) {
-        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-        const segmentValues = participants.map(p => ({
-          fillStyle: getRandomColor(),
-          text: p.name,
-          size: (p.percentage / total) * 360
-        }));
-      
-        wheelContainer.style.display = "block";
-      
-        wheel = new Winwheel({
-          canvasId: "wheelcanvas",
-          drawMode: 'segment',
-          numSegments: segmentValues.length,
-          segments: segmentValues,
-          animation: {
-            type: "spinToStop",
-            duration: 7,
-            spins: 8,
-            callbackFinished: () => {
-              // Mostrar el nombre del ganador SOLO aquí
-              winnerDisplay.innerText = `\n🎉 Ganador: ${winnerNameFromDB} 🎉`;
-              winnerDisplay.classList.add("animate-winner");
-            }
-          }
-        });
-      
-        // Si ya hay ganador, gira la ruleta hasta ese nombre
-        if (winnerNameFromDB) {
-          const winnerIndex = segmentValues.findIndex(s => s.text === winnerNameFromDB);
-          const stopAt = wheel.getRandomForSegment(winnerIndex + 1); // Winwheel usa 1-based index
-          wheel.animation.stopAngle = stopAt;
-          wheel.startAnimation();
-        } else {
-          // Si no hay ganador, elige uno aleatorio según el porcentaje
-          const rand = Math.random() * total;
-          let acc = 0, winnerName = null;
-          for (const p of participants) {
-            acc += p.percentage;
-            if (rand <= acc) {
-              winnerName = p.name;
-              break;
-            }
-          }
-          // Guarda el ganador en Firebase
-          set(ref(db, "sorteo/ganador"), winnerName);
-          // Gira la ruleta hasta ese nombre
-          const winnerIndex = segmentValues.findIndex(s => s.text === winnerName);
-          const stopAt = wheel.getRandomForSegment(winnerIndex + 1);
-          wheel.animation.stopAngle = stopAt;
-          wheel.startAnimation();
         }
       }
 
