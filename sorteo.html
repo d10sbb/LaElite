@@ -182,9 +182,7 @@
         onValue(ref(db, "sorteo/ganador"), (snapshot) => {
           const winner = snapshot.val();
           if (winner) {
-            winnerDisplay.innerText = `\n🎉 Ganador: ${winner} 🎉`;
-            winnerDisplay.classList.add("animate-winner");
-            // Si hay participantes cargados, lanza la ruleta hasta el ganador
+            // No mostrar el nombre aquí, solo lanzar la ruleta
             onValue(ref(db, "sorteo/participants"), (snap) => {
               if (snap.exists()) {
                 launchWheelAndPickWinner(snap.val(), winner);
@@ -246,8 +244,8 @@
             duration: 7,
             spins: 8,
             callbackFinished: () => {
-              // No elijas el ganador aquí, solo muestra el nombre
-              winnerDisplay.innerText = `🎉 Ganador: ${winnerNameFromDB} 🎉`;
+              // Mostrar el nombre del ganador SOLO aquí
+              winnerDisplay.innerText = `\n🎉 Ganador: ${winnerNameFromDB} 🎉`;
               winnerDisplay.classList.add("animate-winner");
             }
           }
