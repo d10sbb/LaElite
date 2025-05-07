@@ -163,19 +163,12 @@
 
       function startDraw() {
         let participantInfo = [];
-        let totalPercentage = 0;
         for (let i = 0; i < 10; i++) {
           let name = document.getElementById(`user${i}`).value.trim();
           let percentage = parseFloat(document.getElementById(`perc${i}`).value);
           if (name && !isNaN(percentage) && percentage > 0) {
             participantInfo.push({ name, percentage });
-            totalPercentage += percentage;
           }
-        }
-      
-        if (Math.abs(totalPercentage - 100) > 0.01) {
-          alert("La suma de los porcentajes debe ser exactamente 100%. Corrige los valores antes de iniciar el sorteo.");
-          return;
         }
       
         if (participantInfo.length === 0) {
@@ -183,12 +176,13 @@
           return;
         }
       
-        // Solo guarda los participantes
+        // Primero guarda los participantes
         set(ref(db, "sorteo/participants"), participantInfo).then(() => {
+          // Luego genera y guarda la semilla aleatoria
+          const seed = Math.random();
+          set(ref(db, "sorteo/seed"), seed);
           // Borra el ganador anterior
           remove(ref(db, "sorteo/ganador"));
-          // Borra la semilla anterior
-          remove(ref(db, "sorteo/seed"));
         });
       }
 
@@ -209,17 +203,7 @@
           const value = snapshot.val();
           countdownDisplay.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
       
-          if (value === 0) {
-            // Solo el admin genera la semilla
-            if (isAdmin) {
-              // Comprueba si ya existe una semilla para evitar duplicados
-              onValue(ref(db, "sorteo/seed"), (snap) => {
-                if (!snap.exists()) {
-                  const seed = Math.random();
-                  set(ref(db, "sorteo/seed"), seed);
-                }
-              }, { onlyOnce: true });
-            }
+          if (value === 0 && !isAdmin) {
             setTimeout(() => {
               watchSeedAndParticipants();
             }, 500);
@@ -242,17 +226,9 @@
 
       function launchWheelWithSeed(participants, seed) {
         const total = participants.reduce((sum, p) => sum + p.percentage, 0);
-      
-        // Reinicia la lista de colores antes de asignar
-        resetAvailableColors();
-      
-        if (participants.length > availableColors.length) {
-          alert("Hay más participantes que colores disponibles. Añade más colores o reduce el número de participantes.");
-          return;
-        }
-      
-        const segmentValues = participants.map(p => ({
-          fillStyle: getRandomColor(),
+        const vividColors = getVividColors(participants.length);
+        const segmentValues = participants.map((p, idx) => ({
+          fillStyle: vividColors[idx],
           text: p.name,
           size: (p.percentage / total) * 360
         }));
@@ -312,37 +288,22 @@
         }
       }
 
-      // Lista global de colores vivos (se reinicia antes de cada sorteo)
-      let availableColors = [];
-      
-      function resetAvailableColors() {
-        availableColors = [
-          '#FF5733', // rojo vivo
-          '#FFBD33', // naranja
-          '#DBFF33', // amarillo
-          '#75FF33', // verde lima
-          '#33FF57', // verde
-          '#33FFBD', // turquesa
-          '#33DBFF', // azul claro
-          '#3375FF', // azul
-          '#8E33FF', // violeta
-          '#FF33A8'  // rosa
-        ];
-      }
-      
-      function getRandomColor() {
-        if (availableColors.length === 0) {
-          alert("No hay más colores disponibles para asignar. Reduce el número de participantes o añade más colores.");
-          return '#000000'; // Negro por defecto si se acaban los colores
+      function getVividColors(numColors) {
+        const colors = [];
+        const step = 360 / numColors;
+        for (let i = 0; i < numColors; i++) {
+          // HSL: tono repartido, saturación y luminosidad altas
+          const hue = Math.round(i * step);
+          colors.push(`hsl(${hue}, 85%, 55%)`);
         }
-        const idx = Math.floor(Math.random() * availableColors.length);
-        const color = availableColors[idx];
-        availableColors.splice(idx, 1); // Elimina el color para que no se repita
-        return color;
+        // Barajar los colores para que no siempre sean iguales
+        for (let i = colors.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [colors[i], colors[j]] = [colors[j], colors[i]];
+        }
+        return colors;
       }
-      
     });
-    
   </script>
 </head>
 <body>
