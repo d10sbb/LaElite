@@ -163,12 +163,20 @@
 
       function startDraw() {
         let participantInfo = [];
+        let totalPercentage = 0;
         for (let i = 0; i < 10; i++) {
           let name = document.getElementById(`user${i}`).value.trim();
           let percentage = parseFloat(document.getElementById(`perc${i}`).value);
           if (name && !isNaN(percentage) && percentage > 0) {
             participantInfo.push({ name, percentage });
+            totalPercentage += percentage;
           }
+        }
+      
+        // Permite un pequeño margen de error por decimales
+        if (Math.abs(totalPercentage - 100) > 0.01) {
+          alert("La suma de los porcentajes debe ser exactamente 100%. Corrige los valores antes de iniciar el sorteo.");
+          return;
         }
       
         if (participantInfo.length === 0) {
@@ -226,6 +234,15 @@
 
       function launchWheelWithSeed(participants, seed) {
         const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+      
+        // Reinicia la lista de colores antes de asignar
+        resetAvailableColors();
+      
+        if (participants.length > availableColors.length) {
+          alert("Hay más participantes que colores disponibles. Añade más colores o reduce el número de participantes.");
+          return;
+        }
+      
         const segmentValues = participants.map(p => ({
           fillStyle: getRandomColor(),
           text: p.name,
@@ -287,8 +304,11 @@
         }
       }
 
-      function getRandomColor() {
-        const vibrantColors = [
+      // Lista global de colores vivos (se reinicia antes de cada sorteo)
+      let availableColors = [];
+      
+      function resetAvailableColors() {
+        availableColors = [
           '#FF5733', // rojo vivo
           '#FFBD33', // naranja
           '#DBFF33', // amarillo
@@ -300,9 +320,21 @@
           '#8E33FF', // violeta
           '#FF33A8'  // rosa
         ];
-        return vibrantColors[Math.floor(Math.random() * vibrantColors.length)];
       }
+      
+      function getRandomColor() {
+        if (availableColors.length === 0) {
+          alert("No hay más colores disponibles para asignar. Reduce el número de participantes o añade más colores.");
+          return '#000000'; // Negro por defecto si se acaban los colores
+        }
+        const idx = Math.floor(Math.random() * availableColors.length);
+        const color = availableColors[idx];
+        availableColors.splice(idx, 1); // Elimina el color para que no se repita
+        return color;
+      }
+      
     });
+    
   </script>
 </head>
 <body>
