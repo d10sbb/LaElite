@@ -8,16 +8,13 @@
     body { font-family: Arial, sans-serif; text-align: center; }
     #admin, #loginContainer { display: none; }
     .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; }
-    .countdown { font-size: 28px; color: red; font-weight: bold; margin-top: 15px; }
     .participant-list { margin-top: 18px; font-size: 18px; display: none; }
-
     #wheelContainer {
       position: relative;
       width: 400px;
       margin: 0 auto;
       display: none;
     }
-
     .pointer {
       width: 0;
       height: 0;
@@ -29,13 +26,11 @@
       left: calc(50% - 20px);
       z-index: 10;
     }
-
     @keyframes zoomIn {
       0% { transform: scale(0); opacity: 0; }
       50% { transform: scale(1.1); opacity: 1; }
       100% { transform: scale(1); opacity: 1; }
     }
-
     .animate-winner {
       animation: zoomIn 1s ease-out;
     }
@@ -46,7 +41,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
-    import { getDatabase, ref, set, onValue, remove, push } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
@@ -121,36 +116,18 @@
 
         set(ref(db, "sorteo/participants"), participants);
 
-        // Elegir ganador aleatoriamente según los porcentajes
-        const random = Math.random() * 100;
-        let cumulative = 0;
-        let winner;
-        for (const participant of participants) {
-          cumulative += participant.percentage;
-          if (random <= cumulative) {
-            winner = participant;
-            break;
-          }
-        }
-
-        // Calcular ángulo donde debe detenerse la ruleta
+        // Crear segmentos de la ruleta
         const totalAngle = 360;
         const segments = participants.map(p => ({
           text: p.name,
           size: (p.percentage / 100) * totalAngle
         }));
 
-        let stopAngle = 0;
-        let angleStart = 0;
-        for (const segment of segments) {
-          angleStart += segment.size;
-          if (segment.text === winner.name) {
-            stopAngle = angleStart - segment.size / 2;
-            break;
-          }
-        }
+        // Elegir un ángulo aleatorio para detener la ruleta
+        const randomAngle = Math.random() * 360;
 
-        set(ref(db, "sorteo/winner"), { ...winner, angle: stopAngle });
+        // Guardar el ángulo y los participantes en Firebase
+        set(ref(db, "sorteo/winner"), { angle: randomAngle });
       }
 
       function resetDraw() {
@@ -178,8 +155,6 @@
         onValue(ref(db, "sorteo/winner"), (snapshot) => {
           const winnerData = snapshot.val();
           if (winnerData) {
-            winnerDisplay.innerText = `🎉 Ganador: ${winnerData.name} 🎉`;
-            winnerDisplay.classList.add("animate-winner");
             launchWheel(winnerData.angle);
           }
         });
