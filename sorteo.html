@@ -276,6 +276,7 @@
       
               // Reproducir aplausos al terminar
               const audioAplausos = document.getElementById("audioAplausos");
+              console.log("Intentando reproducir aplausos");
               if (audioAplausos) {
                 audioAplausos.currentTime = 0;
                 audioAplausos.play();
@@ -294,6 +295,7 @@
         // Función para reproducir el sonido del clic
         function playClicSound() {
           const audioClic = document.getElementById("audioClic");
+          console.log("Intentando reproducir clic");
           if (audioClic) {
             audioClic.currentTime = 0;
             audioClic.play();
