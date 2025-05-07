@@ -158,13 +158,15 @@
           set(ref(db, "sorteo/countdown"), countdownTime);
 
           countdownTimer = setInterval(() => {
-            update(ref(db, "sorteo"), {
-              countdown: countdownTime - 1
+            onValue(ref(db, "sorteo/countdown"), (snapshot) => {
+              const currentCountdown = snapshot.val();
+              if (currentCountdown > 0) {
+                update(ref(db, "sorteo"), { countdown: currentCountdown - 1 });
+              } else {
+                clearInterval(countdownTimer);
+                spinWheel();
+              }
             });
-            countdownTime--;
-            if (countdownTime <= 0) {
-              clearInterval(countdownTimer);
-            }
           }, 1000);
         }
       }
@@ -174,9 +176,6 @@
           const timeLeft = snapshot.val();
           if (timeLeft !== null) {
             countdownDisplay.innerText = `⏳ Tiempo restante: ${timeLeft} s`;
-            if (timeLeft === 0) {
-              spinWheel();
-            }
           }
         });
       }
