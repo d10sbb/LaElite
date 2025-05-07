@@ -131,7 +131,7 @@
           try {
             const audioClic = document.getElementById("audioClic");
             const audioAplausos = document.getElementById("audioAplausos");
-            if (audioUnlocked && audioAplausos) {
+            if (audioClic) {
               audioClic.volume = 1;
               audioClic.play().then(() => {
                 audioClic.pause();
@@ -145,7 +145,7 @@
                 audioAplausos.currentTime = 0;
               }).catch(()=>{});
             }
-            audioUnlocked = true; // <-- Aquí marcamos que ya está desbloqueado
+            audioUnlocked = true;
           } catch(e) {}
         }
         startDraw();
@@ -281,7 +281,7 @@
               // Reproducir aplausos al terminar
               const audioAplausos = document.getElementById("audioAplausos");
               console.log("Intentando reproducir aplausos");
-              if (audioAplausos) {
+              if (audioUnlocked && audioAplausos) {
                 audioAplausos.currentTime = 0;
                 audioAplausos.play();
               }
