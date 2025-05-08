@@ -84,12 +84,17 @@
       const startButton = document.getElementById("startButton");
       const resetButton = document.getElementById("resetButton");
       const wheelContainer = document.getElementById("wheelContainer");
-
       const activarSonidoBtn = document.getElementById("activarSonido");
-
       const musicControls = document.getElementById("musicControls");
       const playPauseMusicBtn = document.getElementById("playPauseMusic");
-
+      const musicVolume = document.getElementById("musicVolume");
+      
+      musicVolume.addEventListener("input", () => {
+        if (window.ytPlayer && typeof window.ytPlayer.setVolume === "function") {
+          window.ytPlayer.setVolume(musicVolume.value);
+        }
+      });
+      
       // Solo mostrar controles de música a los viewers
       if (!isAdmin) {
         musicControls.style.display = "block";
@@ -461,6 +466,11 @@
               'onReady': function(event) {
                 window.musicReady = true;
                 playPauseMusicBtn.textContent = "▶️ Reproducir música";
+                // Pon el volumen al valor actual del control
+                var vol = document.getElementById("musicVolume");
+                if (vol && typeof window.ytPlayer.setVolume === "function") {
+                  window.ytPlayer.setVolume(vol.value);
+                }
               },
               'onStateChange': function(event) {
                 if (event.data === YT.PlayerState.PLAYING) {
@@ -512,6 +522,7 @@
     <br>
     <div id="musicControls" style="display:none; margin: 10px auto;">
       <button id="playPauseMusic"> ▶️ Reproducir música </button>
+      <input type="range" id="musicVolume" min="0" max="100" value="100" style="vertical-align: middle;">
       <div id="ytplayer" style="width:0;height:0;overflow:hidden;position:absolute;left:-9999px;"></div>
     </div>
     <br>
