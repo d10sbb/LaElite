@@ -341,14 +341,6 @@
               winnerDisplay.innerText = `🎉 Ganador: ${winnerName} 🎉`;
               winnerDisplay.classList.add("animate-winner");
               set(ref(db, "sorteo/ganador"), winnerName);
-      
-              // Reproducir aplausos al terminar
-              const audioAplausos = document.getElementById("audioAplausos");
-              console.log("Intentando reproducir aplausos");
-              if (audioUnlocked && audioAplausos) {
-                audioAplausos.currentTime = 0;
-                audioAplausos.play();
-              }
 
               const audioAplausos = document.getElementById("audioAplausos");
               if (audioUnlocked && audioAplausos) {
