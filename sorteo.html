@@ -43,7 +43,8 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.5/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/zarocknz/javascript-winwheel@2.7.0/Winwheel.min.js"></script>
-
+  <script src="https://www.youtube.com/iframe_api"></script>
+  
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
@@ -68,6 +69,9 @@
     let countdownTimer;
     let wheelLaunched = false;
     let audioUnlocked = false;
+    let ytPlayer;
+    let musicPlaying = false;
+    let musicReady = false;
     
     document.addEventListener("DOMContentLoaded", function () {
       const isAdmin = location.search.includes("admin");
@@ -82,6 +86,24 @@
       const wheelContainer = document.getElementById("wheelContainer");
 
       const activarSonidoBtn = document.getElementById("activarSonido");
+
+      const musicControls = document.getElementById("musicControls");
+      const playPauseMusicBtn = document.getElementById("playPauseMusic");
+
+      // Solo mostrar controles de música a los viewers
+      if (!isAdmin) {
+        musicControls.style.display = "block";
+      }
+    
+      playPauseMusicBtn.addEventListener("click", () => {
+        if (musicReady && ytPlayer) {
+          if (musicPlaying) {
+            ytPlayer.pauseVideo();
+          } else {
+            ytPlayer.playVideo();
+          }
+        }
+      });
 
       // Solo mostrar el botón a los viewers
       if (!isAdmin) {
@@ -265,6 +287,10 @@
           countdownDisplay.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
       
           if (value === 0 && !isAdmin) {
+            // Pausar la música justo antes de la ruleta
+            if (musicReady && ytPlayer && musicPlaying) {
+              ytPlayer.pauseVideo();
+            }
             setTimeout(() => {
               watchSeedAndParticipants();
             }, 500);
@@ -387,6 +413,37 @@
         }
         return colors;
       }
+
+      // Cambia este ID por el de tu playlist de YouTube
+      const YT_PLAYLIST_ID = "PLtN-ATFsIsaZm4KgdYEVnaIYgXxOE5Fwe";
+      
+      window.onYouTubeIframeAPIReady = function() {
+        ytPlayer = new YT.Player('ytplayer', {
+          height: '0',
+          width: '0',
+          playerVars: {
+            listType: 'playlist',
+            list: YT_PLAYLIST_ID,
+            autoplay: 0,
+            controls: 0,
+            modestbranding: 1,
+            loop: 1
+          },
+          events: {
+            'onReady': function() { musicReady = true; },
+            'onStateChange': function(event) {
+              if (event.data === YT.PlayerState.PLAYING) {
+                playPauseMusicBtn.textContent = "⏸️ Música";
+                musicPlaying = true;
+              } else {
+                playPauseMusicBtn.textContent = "▶️ Música";
+                musicPlaying = false;
+              }
+            }
+          }
+        });
+      };
+      
     });
   </script>
 </head>
@@ -416,6 +473,11 @@
       <br>
     </div>
     <button id="activarSonido" style="display:none; margin: 20px auto;">🔊 Activar sonido</button>
+    <br>
+    <div id="musicControls" style="display:none; margin: 10px auto;">
+      <button id="playPauseMusic">▶️ Música</button>
+      <div id="ytplayer" style="display:none;"></div>
+    </div>
     <br>
     <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
   </div>
