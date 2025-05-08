@@ -219,7 +219,7 @@
         let totalPercentage = 0;
         for (let i = 0; i < 10; i++) {
           let name = document.getElementById(`user${i}`).value.trim();
-          let percentage = parseFloat(document.getElementById(`perc${i}`).value);
+          let percentage = parseFloat(document.getElementById(`perc${i}`).value.replace(',', '.'));
           if (name && !isNaN(percentage) && percentage > 0) {
             participantInfo.push({ name, percentage });
             totalPercentage += percentage;
