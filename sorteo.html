@@ -102,7 +102,7 @@
     
       playPauseMusicBtn.addEventListener("click", () => {
         if (!window.musicReady || !window.ytPlayer) {
-          alert("La música aún no está lista. Espera unos segundos e inténtalo de nuevo.");
+          alert("La música aún no está lista. Espera unos segundos y/o recarga la página e inténtalo de nuevo.");
           return;
         }
         if (window.musicPlaying) {
@@ -113,11 +113,11 @@
             let playPromise = window.ytPlayer.playVideo();
             if (playPromise && typeof playPromise.then === "function") {
               playPromise.catch(() => {
-                alert("El navegador ha bloqueado la reproducción automática. Haz clic en 'Activar sonido' o interactúa con la página.");
+                alert("El navegador ha bloqueado la reproducción automática. Haz click en 'Activar sonido' o interactúa con la página.");
               });
             }
           } catch (e) {
-            alert("El navegador ha bloqueado la reproducción automática. Haz clic en 'Activar sonido' o interactúa con la página.");
+            alert("El navegador ha bloqueado la reproducción automática. Haz click en 'Activar sonido' o interactúa con la página.");
           }
         }
       });
