@@ -4,40 +4,108 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sorteo mensual LaÉlite</title>
+  
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; }
-    #admin, #loginContainer { display: none; }
-    .winner { font-size: 60px; font-weight: bold; color: green; margin-top: 20px; }
-    .countdown { font-size: 28px; color: red; font-weight: bold; margin-top: 15px; }
-    .participant-list { margin-top: 18px; font-size: 18px; display: none; }
-
-    #wheelContainer {
-      position: relative;
-      width: 400px;
-      margin: 0 auto;
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #181a1b; /* Gris oscuro */
+      color: #fff; /* Letras blancas */
+    }
+    
+    #admin, #loginContainer {
       display: none;
     }
-
+    
+    .winner {
+      font-size: 60px;
+      font-weight: bold;
+      color: #00ffae; /* Verde-azulado brillante */
+      margin-top: 20px;
+      text-shadow: 0 2px 8px #000;
+    }
+    
+    .countdown {
+      font-size: 28px;
+      color: #ff4b4b; /* Rojo vivo */
+      font-weight: bold;
+      margin-top: 15px;
+      text-shadow: 0 2px 8px #000;
+    }
+    
+    .participant-list {
+      margin-top: 18px;
+      font-size: 18px;
+      display: none;
+      color: #fff;
+    }
+    
+    #viewer, #admin, #loginContainer {
+      background: #23272a;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px #000a;
+      padding: 24px 0 24px 0;
+      margin: 24px auto;
+      max-width: 500px;
+    }
+    
+    input, button {
+      background: #23272a;
+      color: #fff;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin: 4px;
+      font-size: 16px;
+    }
+    
+    input:focus, button:focus {
+      outline: 2px solid #00ffae;
+    }
+    
+    button {
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    button:hover {
+      background: #2c3136;
+    }
+    
+    #musicControls {
+      background: #23272a;
+      border-radius: 8px;
+      padding: 8px 0;
+    }
+    
     .pointer {
       width: 0;
       height: 0;
       border-left: 20px solid transparent;
       border-right: 20px solid transparent;
-      border-top: 30px solid red;
+      border-top: 30px solid #ff4b4b;
       position: absolute;
       top: -15px;
       left: calc(50% - 20px);
       z-index: 10;
+      filter: drop-shadow(0 2px 6px #000a);
     }
-
+    
+    #wheelcanvas {
+      background: #23272a;
+      border-radius: 50%;
+      box-shadow: 0 2px 16px #000a;
+    }
+    
+    .animate-winner {
+      animation: zoomIn 1s ease-out;
+    }
+    
+    /* ¡NO OLVIDES ESTO! */
     @keyframes zoomIn {
       0% { transform: scale(0); opacity: 0; }
       50% { transform: scale(1.1); opacity: 1; }
       100% { transform: scale(1); opacity: 1; }
-    }
-
-    .animate-winner {
-      animation: zoomIn 1s ease-out;
     }
   </style>
 
