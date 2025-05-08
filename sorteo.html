@@ -420,43 +420,49 @@
   </script>
   
   <script>
-  // Cambia este ID por el de tu playlist de YouTube
-  const YT_PLAYLIST_ID = "PLtN-ATFsIsaZm4KgdYEVnaIYgXxOE5Fwe";
-
-  window.onYouTubeIframeAPIReady = function() {
-    window.ytPlayer = new YT.Player('ytplayer', {
-      height: '0',
-      width: '0',
-      playerVars: {
-        listType: 'playlist',
-        list: YT_PLAYLIST_ID,
-        autoplay: 0,
-        controls: 0,
-        modestbranding: 1,
-        loop: 1
-      },
-      events: {
-        'onReady': function(event) {
-          window.musicReady = true;
-          if (window.playPauseMusicBtn) {
-            window.playPauseMusicBtn.textContent = "▶️ Música";
-          }
-        },
-        'onStateChange': function(event) {
-          if (window.playPauseMusicBtn) {
-            if (event.data === YT.PlayerState.PLAYING) {
-              window.playPauseMusicBtn.textContent = "⏸️ Música";
-              window.musicPlaying = true;
-            } else {
-              window.playPauseMusicBtn.textContent = "▶️ Música";
-              window.musicPlaying = false;
+    const YT_PLAYLIST_ID = "PLtN-ATFsIsaZm4KgdYEVnaIYgXxOE5Fwe";
+  
+    window.onYouTubeIframeAPIReady = function() {
+      // Espera a que el DOM esté listo antes de crear el reproductor
+      function createYTPlayerWhenReady() {
+        const ytDiv = document.getElementById('ytplayer');
+        const playPauseMusicBtn = document.getElementById('playPauseMusic');
+        if (ytDiv && playPauseMusicBtn) {
+          window.ytPlayer = new YT.Player('ytplayer', {
+            height: '0',
+            width: '0',
+            playerVars: {
+              listType: 'playlist',
+              list: YT_PLAYLIST_ID,
+              autoplay: 0,
+              controls: 0,
+              modestbranding: 1,
+              loop: 1
+            },
+            events: {
+              'onReady': function(event) {
+                window.musicReady = true;
+                playPauseMusicBtn.textContent = "▶️ Reproducir música";
+              },
+              'onStateChange': function(event) {
+                if (event.data === YT.PlayerState.PLAYING) {
+                  playPauseMusicBtn.textContent = "⏸️ Pausar música";
+                  window.musicPlaying = true;
+                } else {
+                  playPauseMusicBtn.textContent = "▶️ Reproducir música";
+                  window.musicPlaying = false;
+                }
+              }
             }
-          }
+          });
+        } else {
+          // Si aún no existen, vuelve a intentarlo en 100ms
+          setTimeout(createYTPlayerWhenReady, 100);
         }
       }
-    });
-  };
-</script>
+      createYTPlayerWhenReady();
+    };
+  </script>
   
 </head>
 <body>
@@ -487,8 +493,8 @@
     <button id="activarSonido" style="display:none; margin: 20px auto;">🔊 Activar sonido</button>
     <br>
     <div id="musicControls" style="display:none; margin: 10px auto;">
-      <button id="playPauseMusic">▶️ Reproducir/Pausar música</button>
-      <div id="ytplayer" style="width:300px;height:200px;margin:auto;"></div>
+      <button id="playPauseMusic"> ▶️ Reproducir música </button>
+      <div id="ytplayer" style="width:0;height:0;overflow:hidden;position:absolute;left:-9999px;"></div>
     </div>
     <br>
     <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
