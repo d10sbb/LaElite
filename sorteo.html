@@ -217,20 +217,13 @@
       }
 
       function startCountdown() {
-        let timeLeft = parseInt(document.getElementById("countdownInput").value);
-        if (isNaN(timeLeft) || timeLeft <= 0) {
+        let seconds = parseInt(document.getElementById("countdownInput").value);
+        if (isNaN(seconds) || seconds <= 0) {
           alert("Introduce un tiempo válido para la cuenta atrás.");
           return;
         }
-        set(ref(db, "sorteo/countdown"), timeLeft);
-        countdownTimer = setInterval(() => {
-          if (timeLeft > 0) {
-            timeLeft--;
-            set(ref(db, "sorteo/countdown"), timeLeft);
-          } else {
-            clearInterval(countdownTimer);
-          }
-        }, 1000);
+        const endTime = Date.now() + seconds * 1000;
+        set(ref(db, "sorteo/countdownEnd"), endTime);
       }
 
       function startDraw() {
@@ -280,19 +273,29 @@
       }
 
       function watchCountdown() {
-        onValue(ref(db, "sorteo/countdown"), (snapshot) => {
-          const value = snapshot.val();
-          countdownDisplay.innerText = value ? `⏳ Tiempo restante: ${value} s` : "⏳ Tiempo restante: -- s";
-      
-          if (value === 0 && !isAdmin) {
-            // Pausar la música justo antes de la ruleta
-            if (musicReady && ytPlayer && musicPlaying) {
-              ytPlayer.pauseVideo();
-            }
-            setTimeout(() => {
-              watchSeedAndParticipants();
-            }, 500);
+        onValue(ref(db, "sorteo/countdownEnd"), (snapshot) => {
+          const endTime = snapshot.val();
+          if (!endTime) {
+            countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
+            return;
           }
+      
+          function updateCountdown() {
+            const now = Date.now();
+            let secondsLeft = Math.max(0, Math.round((endTime - now) / 1000));
+            countdownDisplay.innerText = `⏳ Tiempo restante: ${secondsLeft} s`;
+      
+            if (secondsLeft > 0) {
+              setTimeout(updateCountdown, 250); // Actualiza 4 veces por segundo para más precisión
+            } else {
+              if (!isAdmin) {
+                setTimeout(() => {
+                  watchSeedAndParticipants();
+                }, 500);
+              }
+            }
+          }
+          updateCountdown();
         });
       }
 
@@ -346,6 +349,23 @@
                 audioAplausos.currentTime = 0;
                 audioAplausos.play();
               }
+
+              const audioAplausos = document.getElementById("audioAplausos");
+              if (audioUnlocked && audioAplausos) {
+                audioAplausos.currentTime = 0;
+                audioAplausos.play();
+                audioAplausos.onended = function() {
+                  if (window.musicReady && window.ytPlayer && !window.musicPlaying) {
+                    window.ytPlayer.playVideo();
+                  }
+                };
+              } else {
+                // Si no hay aplausos, reanuda la música inmediatamente
+                if (window.musicReady && window.ytPlayer && !window.musicPlaying) {
+                  window.ytPlayer.playVideo();
+                }
+              }
+              
             },
             callbackSound: playClicSound,
             soundTrigger: "segment"
@@ -355,6 +375,12 @@
         // Calcula el ángulo de parada usando la semilla (entre 0 y 360)
         const stopAngle = seed * 360;
         wheel.animation.stopAngle = stopAngle;
+
+        // Pausar la música antes de girar la ruleta
+        if (window.musicReady && window.ytPlayer && window.musicPlaying) {
+          window.ytPlayer.pauseVideo();
+        }
+        
         wheel.startAnimation();
       
         // Función para reproducir el sonido del clic
