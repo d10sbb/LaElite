@@ -413,39 +413,49 @@
         }
         return colors;
       }
-
-      // Cambia este ID por el de tu playlist de YouTube
-      const YT_PLAYLIST_ID = "PLtN-ATFsIsaZm4KgdYEVnaIYgXxOE5Fwe";
-      
-      window.onYouTubeIframeAPIReady = function() {
-        ytPlayer = new YT.Player('ytplayer', {
-          height: '0',
-          width: '0',
-          playerVars: {
-            listType: 'playlist',
-            list: YT_PLAYLIST_ID,
-            autoplay: 0,
-            controls: 0,
-            modestbranding: 1,
-            loop: 1
-          },
-          events: {
-            'onReady': function() { musicReady = true; },
-            'onStateChange': function(event) {
-              if (event.data === YT.PlayerState.PLAYING) {
-                playPauseMusicBtn.textContent = "⏸️ Música";
-                musicPlaying = true;
-              } else {
-                playPauseMusicBtn.textContent = "▶️ Música";
-                musicPlaying = false;
-              }
-            }
-          }
-        });
-      };
       
     });
   </script>
+  
+  <script>
+  // Cambia este ID por el de tu playlist de YouTube
+  const YT_PLAYLIST_ID = "PLtN-ATFsIsaZm4KgdYEVnaIYgXxOE5Fwe";
+
+  window.onYouTubeIframeAPIReady = function() {
+    window.ytPlayer = new YT.Player('ytplayer', {
+      height: '0',
+      width: '0',
+      playerVars: {
+        listType: 'playlist',
+        list: YT_PLAYLIST_ID,
+        autoplay: 0,
+        controls: 0,
+        modestbranding: 1,
+        loop: 1
+      },
+      events: {
+        'onReady': function(event) {
+          window.musicReady = true;
+          if (window.playPauseMusicBtn) {
+            window.playPauseMusicBtn.textContent = "▶️ Música";
+          }
+        },
+        'onStateChange': function(event) {
+          if (window.playPauseMusicBtn) {
+            if (event.data === YT.PlayerState.PLAYING) {
+              window.playPauseMusicBtn.textContent = "⏸️ Música";
+              window.musicPlaying = true;
+            } else {
+              window.playPauseMusicBtn.textContent = "▶️ Música";
+              window.musicPlaying = false;
+            }
+          }
+        }
+      }
+    });
+  };
+</script>
+  
 </head>
 <body>
   <h1>Sorteo del trofeo del Ranking Mensual de Clanes - BoomBang.TV</h1>
