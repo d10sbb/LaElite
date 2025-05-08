@@ -202,7 +202,32 @@
             audioUnlocked = true;
           } catch(e) {}
         }
-        startCountdown();
+        // Validar y guardar participantes
+        let participantInfo = [];
+        let totalPercentage = 0;
+        for (let i = 0; i < 10; i++) {
+          let name = document.getElementById(`user${i}`).value.trim();
+          let percentage = parseFloat(document.getElementById(`perc${i}`).value.replace(',', '.'));
+          if (name && !isNaN(percentage) && percentage > 0) {
+            participantInfo.push({ name, percentage });
+            totalPercentage += percentage;
+          }
+        }
+      
+        if (participantInfo.length === 0) {
+          alert("Ingresa datos válidos en los campos.");
+          return;
+        }
+      
+        if (Math.abs(totalPercentage - 100) > 0.01) {
+          alert("La suma de los porcentajes debe ser exactamente 100. Ahora suma: " + totalPercentage);
+          return;
+        }
+      
+        // Guardar participantes para que se muestre el listado
+        set(ref(db, "sorteo/participants"), participantInfo).then(() => {
+          startCountdown();
+        });
       });
 
       resetButton.addEventListener("click", resetDraw);
@@ -233,38 +258,12 @@
 
       function startDraw() {
         wheelLaunched = false;
-        let participantInfo = [];
-        let totalPercentage = 0;
-        for (let i = 0; i < 10; i++) {
-          let name = document.getElementById(`user${i}`).value.trim();
-          let percentage = parseFloat(document.getElementById(`perc${i}`).value.replace(',', '.'));
-          if (name && !isNaN(percentage) && percentage > 0) {
-            participantInfo.push({ name, percentage });
-            totalPercentage += percentage;
-          }
-        }
-      
-        if (participantInfo.length === 0) {
-          alert("Ingresa datos válidos en los campos.");
-          return;
-        }
-      
-        // Comprobar que la suma es exactamente 100 (puedes ajustar la tolerancia si quieres)
-        if (Math.abs(totalPercentage - 100) > 0.01) {
-          alert("La suma de los porcentajes debe ser exactamente 100. Ahora suma: " + totalPercentage);
-          return;
-        }
-      
-        // Primero guarda los participantes
-        set(ref(db, "sorteo/participants"), participantInfo).then(() => {
-          // Luego genera y guarda la semilla aleatoria
-          const seed = Math.random();
-          set(ref(db, "sorteo/seed"), seed).then(() => {
-            // Borra el ganador anterior
-            remove(ref(db, "sorteo/ganador"));
-            // Borra el contador solo después de guardar la semilla
-            remove(ref(db, "sorteo/countdownEnd"));
-          });
+        // No hace falta volver a validar ni guardar participantes aquí
+        // Solo guardar la semilla y borrar el ganador y el contador
+        const seed = Math.random();
+        set(ref(db, "sorteo/seed"), seed).then(() => {
+          remove(ref(db, "sorteo/ganador"));
+          remove(ref(db, "sorteo/countdownEnd"));
         });
       }
 
