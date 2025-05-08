@@ -101,10 +101,24 @@
       }
     
       playPauseMusicBtn.addEventListener("click", () => {
-        if (window.musicReady && window.ytPlayer && window.musicPlaying) {
+        if (!window.musicReady || !window.ytPlayer) {
+          alert("La música aún no está lista. Espera unos segundos e inténtalo de nuevo.");
+          return;
+        }
+        if (window.musicPlaying) {
           window.ytPlayer.pauseVideo();
         } else {
-            window.ytPlayer.playVideo()
+          // Intenta reproducir y muestra error si el navegador lo bloquea
+          try {
+            let playPromise = window.ytPlayer.playVideo();
+            if (playPromise && typeof playPromise.then === "function") {
+              playPromise.catch(() => {
+                alert("El navegador ha bloqueado la reproducción automática. Haz clic en 'Activar sonido' o interactúa con la página.");
+              });
+            }
+          } catch (e) {
+            alert("El navegador ha bloqueado la reproducción automática. Haz clic en 'Activar sonido' o interactúa con la página.");
+          }
         }
       });
 
@@ -527,7 +541,7 @@
     <div id="musicControls" style="display:none; margin: 10px auto;">
       <button id="playPauseMusic"> ▶️ Reproducir música </button>
       <input type="range" id="musicVolume" min="0" max="100" value="100" style="vertical-align: middle;">
-      <div id="ytplayer" style="width:0;height:0;overflow:hidden;position:absolute;left:-9999px;"></div>
+      <div id="ytplayer" style="width:1px;height:1px;opacity:0;pointer-events:none;"></div>
     </div>
     <br>
     <p id="winnerDisplay" class="winner">Aquí aparecerá el ganador</p>
