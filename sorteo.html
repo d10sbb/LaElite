@@ -96,12 +96,10 @@
       }
     
       playPauseMusicBtn.addEventListener("click", () => {
-        if (musicReady && ytPlayer) {
-          if (musicPlaying) {
-            ytPlayer.pauseVideo();
-          } else {
-            ytPlayer.playVideo();
-          }
+        if (window.musicReady && window.ytPlayer && window.musicPlaying) {
+          window.ytPlayer.pauseVideo();
+        } else {
+            window.ytPlayer.playVideo()
         }
       });
 
@@ -413,7 +411,11 @@
         }
         return colors;
       }
-      
+
+      window.playPauseMusicBtn = playPauseMusicBtn;
+      window.musicPlaying = musicPlaying;
+      window.musicReady = musicReady;
+            
     });
   </script>
   
