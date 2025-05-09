@@ -93,13 +93,13 @@
     .pointer::after {
       content: "";
       position: absolute;
-      left: calc(50% - 22px); /* Antes -4ptx; */
+      left: calc(50% - 22px);
       top: -35px;
       width: 0;
       height: 0;
       border-left: 24px solid transparent;
       border-right: 24px solid transparent;
-      border-top: 40px solid transparent;
+      border-top: 42px solid transparent;
       border-top-color: #fff;
       z-index: -1;
       pointer-events: none;
@@ -415,7 +415,7 @@
         remove(ref(db, "sorteo/seed"));
 
         winnerDisplay.innerText = "Aquí aparecerá el ganador";
-        countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
+        countdownDisplay.innerText = "⏳ Tiempo restante: -- s ⏳";
         participantList.innerHTML = "";
         participantList.style.display = "none";
         wheelContainer.style.display = "none";
@@ -459,14 +459,14 @@
         onValue(ref(db, "sorteo/countdownEnd"), (snapshot) => {
           const endTime = snapshot.val();
           if (!endTime) {
-            countdownDisplay.innerText = "⏳ Tiempo restante: -- s";
+            countdownDisplay.innerText = "⏳ Tiempo restante: -- s ⏳";
             return;
           }
           
           function updateCountdown() {
             const now = Date.now();
             let secondsLeft = Math.max(0, Math.round((endTime - now) / 1000));
-            countdownDisplay.innerText = `⏳ Tiempo restante: ${secondsLeft} s`;
+            countdownDisplay.innerText = `⏳ Tiempo restante: ${secondsLeft} s ⏳`;
       
             if (secondsLeft > 0) {
               setTimeout(updateCountdown, 250); // Actualiza 4 veces por segundo para más precisión
