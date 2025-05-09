@@ -434,12 +434,9 @@
 
       function startDraw() {
         wheelLaunched = false;
-        // No hace falta volver a validar ni guardar participantes aquí
-        // Solo guardar la semilla y borrar el ganador y el contador
+        // Solo guardar la semilla y el ganador, NO borres nada aquí
         const seed = Math.random();
         set(ref(db, "sorteo/seed"), seed).then(() => {
-          remove(ref(db, "sorteo/ganador"));
-          remove(ref(db, "sorteo/countdownEnd"));
           // Leer los participantes de la base de datos
           onValue(ref(db, "sorteo/participants"), (snapshot) => {
             const participants = snapshot.val();
@@ -448,7 +445,6 @@
               set(ref(db, "sorteo/ganador"), winnerName);
             }
           }, { onlyOnce: true });
-          
         });
       }
 
@@ -480,13 +476,15 @@
             } else {
               // Cualquier usuario puede intentar iniciar el sorteo, pero solo si no existe ya la semilla
               get(ref(db, "sorteo/seed")).then((seedSnap) => {
-                if (!seedSnap.exists()) {
-                  startDraw();
-                } else {
-                  setTimeout(() => {
-                    watchSeedAndParticipants();
-                  }, 500);
-                }
+                get(ref(db, "sorteo/ganador")).then((winnerSnap) => {
+                  if (!seedSnap.exists() && !winnerSnap.exists()) {
+                    startDraw();
+                  } else {
+                    setTimeout(() => {
+                      watchSeedAndParticipants();
+                    }, 500);
+                  }
+                });
               });
             }
           }
