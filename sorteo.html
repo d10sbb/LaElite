@@ -316,7 +316,7 @@
             loginContainer.style.display = "none";
             setupAdmin();
             wheelContainer.style.display = "none"; // Oculta ruleta en modo admin
-            watchCountdown();
+            // El admin NO debe llamar a watchCountdown ni a nada de la ruleta
           } else {
             loginContainer.style.display = "block";
           }
