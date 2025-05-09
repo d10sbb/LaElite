@@ -455,12 +455,8 @@
       function watchWinner() {
         onValue(ref(db, "sorteo/ganador"), (snapshot) => {
           const winner = snapshot.val();
-          window.ganadorPendiente = winner; // Guarda el ganador pendiente
-          // Solo mostrar si la ruleta ya terminó de girar
-          if (winner && !window.ruletaGirando) {
-            winnerDisplay.innerText = `🎉 Ganador: ${winner} 🎉`;
-            winnerDisplay.classList.add("animate-winner");
-          } else if (!winner) {
+          window.ganadorPendiente = winner; // Solo guardar, NO mostrar aquí
+          if (!winner) {
             winnerDisplay.innerText = "Esperando a la finalización del sorteo...";
           }
         });
