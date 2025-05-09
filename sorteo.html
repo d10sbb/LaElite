@@ -455,10 +455,12 @@
       function watchWinner() {
         onValue(ref(db, "sorteo/ganador"), (snapshot) => {
           const winner = snapshot.val();
-          if (winner) {
+          window.ganadorPendiente = winner; // Guarda el ganador pendiente
+          // Solo mostrar si la ruleta ya terminó de girar
+          if (winner && !window.ruletaGirando) {
             winnerDisplay.innerText = `🎉 Ganador: ${winner} 🎉`;
             winnerDisplay.classList.add("animate-winner");
-          } else {
+          } else if (!winner) {
             winnerDisplay.innerText = "Esperando a la finalización del sorteo...";
           }
         });
@@ -519,7 +521,9 @@
       
         // Variables para controlar el sonido del clic
         let lastSoundSegment = null;
-      
+
+        window.ruletaGirando = true;
+        
         wheel = new Winwheel({
           canvasId: "wheelcanvas",
           drawMode: 'segment',
@@ -530,11 +534,10 @@
             duration: 7,
             spins: 8,
             callbackFinished: () => {
-              const indicatedSegment = wheel.getIndicatedSegment();
-              const winnerName = indicatedSegment.text;
+              window.ruletaGirando = false;
+              const winnerName = window.ganadorPendiente || wheel.getIndicatedSegment().text;
               winnerDisplay.innerText = `🎉 Ganador: ${winnerName} 🎉`;
               winnerDisplay.classList.add("animate-winner");
-              set(ref(db, "sorteo/ganador"), winnerName);
 
               const audioAplausos = document.getElementById("audioAplausos");
               if (audioUnlocked && audioAplausos) {
