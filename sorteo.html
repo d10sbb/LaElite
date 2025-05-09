@@ -611,15 +611,10 @@
         const colors = [];
         const step = 360 / numColors;
         for (let i = 0; i < numColors; i++) {
-          // HSL: tono repartido, saturación y luminosidad altas
           const hue = Math.round(i * step);
           colors.push(`hsl(${hue}, 85%, 55%)`);
         }
-        // Barajar los colores para que no siempre sean iguales
-        for (let i = colors.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [colors[i], colors[j]] = [colors[j], colors[i]];
-        }
+        // NO barajes los colores, así el orden es siempre el mismo en todos los dispositivos
         return colors;
       }
 
