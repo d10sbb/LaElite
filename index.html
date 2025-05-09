@@ -4,13 +4,58 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sorteo en Vivo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #181a1b;
+            color: #fff;
+        }
+        .main-content {
+            background: #23272a;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px #000a;
+            padding: 40px 0 40px 0;
+            margin: 40px auto 0 auto;
+            max-width: 800px;
+        }
+        h1 {
+            margin-bottom: 16px;
+            font-size: 2.2em;
+            color: #00ffae;
+            text-shadow: 0 2px 8px #000;
+        }
+        p {
+            font-size: 1.2em;
+            color: #fff;
+            margin-bottom: 0;
+        }
+        .boton-home {
+            background: #23272a;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 12px 28px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px #0004;
+            margin-top: 24px;
+        }
+        .boton-home:hover {
+            background: #2c3136;
+        }
+    </style>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js"></script>
 </head>
 <body>
-    <h1>¡Bienvenido al Sorteo en Vivo!</h1>
-    <p id="winnerDisplay">Esperando el sorteo...</p>
-
+    <div class="main-content">
+        <h1>¡Bienvenido al Sorteo en Vivo!</h1>
+        <p id="winnerDisplay">Esperando el sorteo...</p>
+        <button class="boton-home" onclick="location.href='home.html'">Ir a la página principal</button>
+    </div>
     <script>
         // Configuración de Firebase
         const firebaseConfig = {
