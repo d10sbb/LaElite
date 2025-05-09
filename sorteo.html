@@ -440,6 +440,15 @@
         set(ref(db, "sorteo/seed"), seed).then(() => {
           remove(ref(db, "sorteo/ganador"));
           remove(ref(db, "sorteo/countdownEnd"));
+          // Leer los participantes de la base de datos
+          onValue(ref(db, "sorteo/participants"), (snapshot) => {
+            const participants = snapshot.val();
+            if (participants && participants.length > 0) {
+              const winnerName = calcularGanador(participants, seed);
+              set(ref(db, "sorteo/ganador"), winnerName);
+            }
+          }, { onlyOnce: true });
+          
         });
       }
 
@@ -615,10 +624,24 @@
         return colors;
       }
 
+      function calcularGanador(participants, seed) {
+        const total = participants.reduce((sum, p) => sum + p.percentage, 0);
+        let angle = seed * 360;
+        let acumulado = 0;
+        for (let i = 0; i < participants.length; i++) {
+          acumulado += (participants[i].percentage / total) * 360;
+          if (angle <= acumulado) {
+            return participants[i].name;
+          }
+        }
+        // Por si acaso, devuelve el último
+        return participants[participants.length - 1].name;
+      }
+      
       window.playPauseMusicBtn = playPauseMusicBtn;
       window.musicPlaying = musicPlaying;
       window.musicReady = musicReady;
-            
+      
     });
   </script>
   
