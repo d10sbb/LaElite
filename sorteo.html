@@ -208,7 +208,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
-    import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue, remove, get } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
@@ -345,7 +345,7 @@
       function setupAdmin() {
         const userInputs = document.getElementById("userInputs");
         userInputs.innerHTML =
-          '<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>';
+          '<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="86400" value="10"></label><br><br>';
         for (let i = 0; i < 10; i++) {
           userInputs.innerHTML +=
             `<div>
