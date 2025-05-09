@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Home - LaÉlite</title>
+  <title>Home - Clan La Élite</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -22,6 +22,20 @@
       margin: 24px auto 32px auto;
       max-width: 800px;
     }
+    .top-bar .left, .top-bar .center, .top-bar .right {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+    }
+    .top-bar .left {
+      justify-content: flex-start;
+    }
+    .top-bar .center {
+      justify-content: center;
+    }
+    .top-bar .right {
+      justify-content: flex-end;
+    }
     .top-bar button {
       background: #23272a;
       color: #fff;
@@ -33,6 +47,7 @@
       cursor: pointer;
       transition: background 0.2s;
       box-shadow: 0 2px 8px #0004;
+      margin: 0 8px;
     }
     .top-bar button:hover {
       background: #2c3136;
@@ -60,12 +75,19 @@
 </head>
 <body>
   <div class="top-bar">
-    <button onclick="location.href='miembros.html'">Miembros del clan</button>
-    <button onclick="location.href='sorteo.html'">Sorteo Mensual</button>
+    <div class="left">
+      <button onclick="location.href='novedades.html'">Novedades</button>
+    </div>
+    <div class="center">
+      <button onclick="location.href='miembros.html'">Miembros del clan</button>
+    </div>
+    <div class="right">
+      <button onclick="location.href='sorteo.html'">Sorteo mensual</button>
+    </div>
   </div>
   <div class="main-content">
     <h1>Bienvenido a La Élite</h1>
     <p>¡Explora los miembros del clan u observa el sorteo mensual!</p>
-  </div>
+  </div> 
 </body>
 </html>
