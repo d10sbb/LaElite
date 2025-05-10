@@ -472,7 +472,7 @@
             const now = Date.now();
             let secondsLeft = Math.max(0, Math.round((endTime - now) / 1000));
             countdownDisplay.innerText = `⏳ Tiempo restante: ${secondsLeft} s ⏳`;
-          
+      
             if (secondsLeft > 0) {
               setTimeout(updateCountdown, 250);
             } else {
@@ -481,17 +481,12 @@
                 get(ref(db, "sorteo/ganador")).then((winnerSnap) => {
                   if (!seedSnap.exists() && !winnerSnap.exists()) {
                     startDraw();
-                  } else {
-                    setTimeout(() => {
-                      watchSeedAndParticipants();
-                    }, 500);
                   }
-                  // Sigue comprobando cada 250ms hasta que haya semilla o ganador
-                  if (!seedSnap.exists() || !winnerSnap.exists()) {
-                    setTimeout(updateCountdown, 250);
-                  }
+                  // No hace falta más, porque si ya hay semilla o ganador, el resto de la lógica ya se encarga
                 });
               });
+              // Sigue comprobando cada 1 segundo por si entra un viewer tarde
+              setTimeout(updateCountdown, 1000);
             }
           }
       
