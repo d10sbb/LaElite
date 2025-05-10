@@ -410,18 +410,24 @@
       resetButton.addEventListener("click", resetDraw);
 
       function resetDraw() {
+        // Desuscribir listeners de la ruleta
+        if (typeof participantsUnsubscribe === "function") participantsUnsubscribe();
+        if (typeof seedUnsubscribe === "function") seedUnsubscribe();
+        participantsUnsubscribe = null;
+        seedUnsubscribe = null;
+        wheelLaunched = false;
+      
         remove(ref(db, "sorteo/ganador"));
         remove(ref(db, "sorteo/participants"));
         remove(ref(db, "sorteo/countdown"));
         remove(ref(db, "sorteo/countdownEnd"));
         remove(ref(db, "sorteo/seed"));
-
+      
         winnerDisplay.innerText = "Aquí aparecerá el ganador";
         countdownDisplay.innerText = "⏳ Tiempo restante: -- s ⏳";
         participantList.innerHTML = "";
         participantList.style.display = "none";
         wheelContainer.style.display = "none";
-        wheelLaunched = false;
       }
 
       function startCountdown() {
@@ -589,18 +595,25 @@
 
       let wheelLaunched = false;
 
+      let participantsUnsubscribe = null;
+      let seedUnsubscribe = null;
+      
       function watchSeedAndParticipants() {
         let participants = null;
         let seed = null;
       
-        onValue(ref(db, "sorteo/participants"), (snap) => {
+        // Desuscribir listeners anteriores si existen
+        if (participantsUnsubscribe) participantsUnsubscribe();
+        if (seedUnsubscribe) seedUnsubscribe();
+      
+        participantsUnsubscribe = onValue(ref(db, "sorteo/participants"), (snap) => {
           if (snap.exists()) {
             participants = snap.val();
             tryLaunch();
           }
         });
       
-        onValue(ref(db, "sorteo/seed"), (snap) => {
+        seedUnsubscribe = onValue(ref(db, "sorteo/seed"), (snap) => {
           if (snap.exists()) {
             seed = snap.val();
             tryLaunch();
