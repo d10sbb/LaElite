@@ -483,6 +483,11 @@
                   if (!seedSnap.exists() && !winnerSnap.exists()) {
                     console.log("Lanzando sorteo desde este viewer");
                     startDraw();
+                    // ¡AQUÍ! Llama a watchSeedAndParticipants para que la ruleta se muestre y gire
+                    watchSeedAndParticipants();
+                  } else {
+                    // Si ya existe semilla o ganador, asegúrate de que la ruleta se muestre
+                    watchSeedAndParticipants();
                   }
                 });
               });
