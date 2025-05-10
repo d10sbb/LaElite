@@ -234,6 +234,7 @@
     let ytPlayer;
     let musicPlaying = false;
     let musicReady = false;
+    let countdownUnsubscribe = null;
     
     document.addEventListener("DOMContentLoaded", function () {
       const isAdmin = location.search.includes("admin");
@@ -413,6 +414,8 @@
         // Desuscribir listeners de la ruleta
         if (typeof participantsUnsubscribe === "function") participantsUnsubscribe();
         if (typeof seedUnsubscribe === "function") seedUnsubscribe();
+        if (typeof countdownUnsubscribe === "function") countdownUnsubscribe();
+        countdownUnsubscribe = null;
         participantsUnsubscribe = null;
         seedUnsubscribe = null;
         wheelLaunched = false;
@@ -467,7 +470,10 @@
       }
 
       function watchCountdown() {
-        onValue(ref(db, "sorteo/countdownEnd"), (snapshot) => {
+        // Desuscribir si ya existe
+        if (countdownUnsubscribe) countdownUnsubscribe();
+      
+        countdownUnsubscribe = onValue(ref(db, "sorteo/countdownEnd"), (snapshot) => {
           const endTime = snapshot.val();
           if (!endTime) {
             countdownDisplay.innerText = "⏳ Tiempo restante: -- s ⏳";
@@ -483,18 +489,18 @@
             if (secondsLeft > 0) {
               setTimeout(updateCountdown, 250);
             } else {
-              // Intenta lanzar el sorteo si no existe semilla ni ganador
-              get(ref(db, "sorteo/seed")).then((seedSnap) => {
-                get(ref(db, "sorteo/ganador")).then((winnerSnap) => {
-                  if (!seedSnap.exists() && !winnerSnap.exists()) {
-                    console.log("Lanzando sorteo desde este viewer");
-                    startDraw();
-                    // ¡AQUÍ! Llama a watchSeedAndParticipants para que la ruleta se muestre y gire
-                    watchSeedAndParticipants();
-                  } else {
-                    // Si ya existe semilla o ganador, asegúrate de que la ruleta se muestre
-                    watchSeedAndParticipants();
-                  }
+              // SOLO lanza el sorteo si hay participantes
+              get(ref(db, "sorteo/participants")).then((participantsSnap) => {
+                if (!participantsSnap.exists()) return; // No hay participantes, no lances nada
+                get(ref(db, "sorteo/seed")).then((seedSnap) => {
+                  get(ref(db, "sorteo/ganador")).then((winnerSnap) => {
+                    if (!seedSnap.exists() && !winnerSnap.exists()) {
+                      startDraw();
+                      watchSeedAndParticipants();
+                    } else {
+                      watchSeedAndParticipants();
+                    }
+                  });
                 });
               });
               setTimeout(updateCountdown, 1000);
@@ -519,6 +525,7 @@
       }
 
       function launchWheelWithSeed(participants, seed) {
+        if (!participants || participants.length === 0) return;
         const total = participants.reduce((sum, p) => sum + p.percentage, 0);
         const vividColors = getVividColors(participants.length);
         const segmentValues = participants.map((p, idx) => ({
