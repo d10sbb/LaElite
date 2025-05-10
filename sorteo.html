@@ -210,7 +210,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-auth.js";
-    import { getDatabase, ref, set, onValue, remove, get } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
+    import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/9.0.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDzJ04-gdIOQimkkShUs0lI6smLLtXeUcc",
@@ -234,7 +234,6 @@
     let ytPlayer;
     let musicPlaying = false;
     let musicReady = false;
-    let countdownUnsubscribe = null;
     
     document.addEventListener("DOMContentLoaded", function () {
       const isAdmin = location.search.includes("admin");
@@ -319,7 +318,7 @@
             loginContainer.style.display = "none";
             setupAdmin();
             wheelContainer.style.display = "none"; // Oculta ruleta en modo admin
-            // El admin NO debe llamar a watchCountdown ni a nada de la ruleta
+            watchCountdown();
           } else {
             loginContainer.style.display = "block";
           }
@@ -348,7 +347,7 @@
       function setupAdmin() {
         const userInputs = document.getElementById("userInputs");
         userInputs.innerHTML =
-          '<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="86400" value="10"></label><br><br>';
+          '<label>Tiempo de cuenta atrás (segundos): <input type="number" id="countdownInput" min="5" max="300" value="10"></label><br><br>';
         for (let i = 0; i < 10; i++) {
           userInputs.innerHTML +=
             `<div>
@@ -402,47 +401,47 @@
           return;
         }
       
-        const seconds = parseInt(document.getElementById("countdownInput").value);
-          if (isNaN(seconds) || seconds <= 0) {
-            alert("Introduce un tiempo válido para la cuenta atrás.");
-            return;
-          }
-          const endTime = Date.now() + seconds * 1000;
-          set(ref(db, "sorteo/countdownEnd"), endTime).then(() => {
-            set(ref(db, "sorteo/participants"), participantInfo);
-          });
+        // Guardar participantes para que se muestre el listado
+        set(ref(db, "sorteo/participants"), participantInfo).then(() => {
+          startCountdown();
+        });
       });
 
       resetButton.addEventListener("click", resetDraw);
 
       function resetDraw() {
-        // Desuscribir listeners de la ruleta
-        if (typeof participantsUnsubscribe === "function") participantsUnsubscribe();
-        if (typeof seedUnsubscribe === "function") seedUnsubscribe();
-        if (typeof countdownUnsubscribe === "function") countdownUnsubscribe();
-        countdownUnsubscribe = null;
-        participantsUnsubscribe = null;
-        seedUnsubscribe = null;
-        wheelLaunched = false;
-      
         remove(ref(db, "sorteo/ganador"));
         remove(ref(db, "sorteo/participants"));
         remove(ref(db, "sorteo/countdown"));
         remove(ref(db, "sorteo/countdownEnd"));
         remove(ref(db, "sorteo/seed"));
-      
+
         winnerDisplay.innerText = "Aquí aparecerá el ganador";
         countdownDisplay.innerText = "⏳ Tiempo restante: -- s ⏳";
         participantList.innerHTML = "";
         participantList.style.display = "none";
         wheelContainer.style.display = "none";
+        wheelLaunched = false;
+      }
+
+      function startCountdown() {
+        let seconds = parseInt(document.getElementById("countdownInput").value);
+        if (isNaN(seconds) || seconds <= 0) {
+          alert("Introduce un tiempo válido para la cuenta atrás.");
+          return;
+        }
+        const endTime = Date.now() + seconds * 1000;
+        set(ref(db, "sorteo/countdownEnd"), endTime);
       }
 
       function startDraw() {
         wheelLaunched = false;
-        // Solo guardar la semilla y el ganador, NO borres nada aquí
+        // No hace falta volver a validar ni guardar participantes aquí
+        // Solo guardar la semilla y borrar el ganador y el contador
         const seed = Math.random();
         set(ref(db, "sorteo/seed"), seed).then(() => {
+          remove(ref(db, "sorteo/ganador"));
+          remove(ref(db, "sorteo/countdownEnd"));
           // Leer los participantes de la base de datos
           onValue(ref(db, "sorteo/participants"), (snapshot) => {
             const participants = snapshot.val();
@@ -451,6 +450,7 @@
               set(ref(db, "sorteo/ganador"), winnerName);
             }
           }, { onlyOnce: true });
+          
         });
       }
 
@@ -465,43 +465,30 @@
       }
 
       function watchCountdown() {
-        // Desuscribir si ya existe
-        if (countdownUnsubscribe) countdownUnsubscribe();
-      
-        countdownUnsubscribe = onValue(ref(db, "sorteo/countdownEnd"), (snapshot) => {
+        onValue(ref(db, "sorteo/countdownEnd"), (snapshot) => {
           const endTime = snapshot.val();
           if (!endTime) {
             countdownDisplay.innerText = "⏳ Tiempo restante: -- s ⏳";
             return;
           }
-      
+          
           function updateCountdown() {
             const now = Date.now();
-            let secondsLeft = Math.ceil((endTime - now) / 1000);
-            if (secondsLeft < 0) secondsLeft = 0;
+            let secondsLeft = Math.max(0, Math.round((endTime - now) / 1000));
             countdownDisplay.innerText = `⏳ Tiempo restante: ${secondsLeft} s ⏳`;
       
             if (secondsLeft > 0) {
-              setTimeout(updateCountdown, 250);
+              setTimeout(updateCountdown, 250); // Actualiza 4 veces por segundo para más precisión
             } else {
-              // SOLO lanza el sorteo si hay participantes
-              get(ref(db, "sorteo/participants")).then((participantsSnap) => {
-                if (!participantsSnap.exists()) return; // No hay participantes, no lances nada
-                get(ref(db, "sorteo/seed")).then((seedSnap) => {
-                  get(ref(db, "sorteo/ganador")).then((winnerSnap) => {
-                    if (!seedSnap.exists() && !winnerSnap.exists()) {
-                      startDraw();
-                      watchSeedAndParticipants();
-                    } else {
-                      watchSeedAndParticipants();
-                    }
-                  });
-                });
-              });
-              setTimeout(updateCountdown, 1000);
+              if (isAdmin) {
+                startDraw(); // Solo el admin guarda los datos y la semilla cuando el contador llega a 0
+              } else {
+                setTimeout(() => {
+                  watchSeedAndParticipants();
+                }, 500);
+              }
             }
           }
-      
           updateCountdown();
         });
       }
@@ -520,7 +507,6 @@
       }
 
       function launchWheelWithSeed(participants, seed) {
-        if (!participants || participants.length === 0) return;
         const total = participants.reduce((sum, p) => sum + p.percentage, 0);
         const vividColors = getVividColors(participants.length);
         const segmentValues = participants.map((p, idx) => ({
@@ -597,25 +583,18 @@
 
       let wheelLaunched = false;
 
-      let participantsUnsubscribe = null;
-      let seedUnsubscribe = null;
-      
       function watchSeedAndParticipants() {
         let participants = null;
         let seed = null;
       
-        // Desuscribir listeners anteriores si existen
-        if (participantsUnsubscribe) participantsUnsubscribe();
-        if (seedUnsubscribe) seedUnsubscribe();
-      
-        participantsUnsubscribe = onValue(ref(db, "sorteo/participants"), (snap) => {
+        onValue(ref(db, "sorteo/participants"), (snap) => {
           if (snap.exists()) {
             participants = snap.val();
             tryLaunch();
           }
         });
       
-        seedUnsubscribe = onValue(ref(db, "sorteo/seed"), (snap) => {
+        onValue(ref(db, "sorteo/seed"), (snap) => {
           if (snap.exists()) {
             seed = snap.val();
             tryLaunch();
