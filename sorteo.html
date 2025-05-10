@@ -402,10 +402,15 @@
           return;
         }
       
-        // Guardar participantes para que se muestre el listado
-        set(ref(db, "sorteo/participants"), participantInfo).then(() => {
-          startCountdown();
-        });
+        const seconds = parseInt(document.getElementById("countdownInput").value);
+          if (isNaN(seconds) || seconds <= 0) {
+            alert("Introduce un tiempo válido para la cuenta atrás.");
+            return;
+          }
+          const endTime = Date.now() + seconds * 1000;
+          set(ref(db, "sorteo/countdownEnd"), endTime).then(() => {
+            set(ref(db, "sorteo/participants"), participantInfo);
+          });
       });
 
       resetButton.addEventListener("click", resetDraw);
@@ -431,16 +436,6 @@
         participantList.innerHTML = "";
         participantList.style.display = "none";
         wheelContainer.style.display = "none";
-      }
-
-      function startCountdown() {
-        let seconds = parseInt(document.getElementById("countdownInput").value);
-        if (isNaN(seconds) || seconds <= 0) {
-          alert("Introduce un tiempo válido para la cuenta atrás.");
-          return;
-        }
-        const endTime = Date.now() + seconds * 1000;
-        set(ref(db, "sorteo/countdownEnd"), endTime);
       }
 
       function startDraw() {
