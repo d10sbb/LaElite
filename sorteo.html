@@ -87,13 +87,15 @@
       border-top: 36px solid #fff;
       position: absolute;
       top: -15px; /* Ajusta si lo quieres más o menos encima */
-      left: calc(50% - 24px);
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 10;
     }
     .pointer::after {
       content: "";
       position: absolute;
-      left: calc(50% - 23px);
+      left: 50%;
+      transform: translateX(-50%);
       top: -36px;
       width: 0;
       height: 0;
