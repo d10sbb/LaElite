@@ -478,19 +478,15 @@
             countdownDisplay.innerText = `⏳ Tiempo restante: ${secondsLeft} s ⏳`;
       
             if (secondsLeft > 0) {
-              setTimeout(updateCountdown, 250);
+              setTimeout(updateCountdown, 250); // Actualiza 4 veces por segundo para más precisión
             } else {
-              // Cualquier usuario puede intentar iniciar el sorteo si aún no hay ganador
-              onValue(ref(db, "sorteo/ganador"), (snap) => {
-                if (!snap.exists()) {
-                  startDraw();
-                } else {
-                  // Ya hay ganador, solo sigue el flujo normal
-                  setTimeout(() => {
-                    watchSeedAndParticipants();
-                  }, 500);
-                }
-              }, { onlyOnce: true });
+              if (isAdmin) {
+                startDraw(); // Solo el admin guarda los datos y la semilla cuando el contador llega a 0
+              } else {
+                setTimeout(() => {
+                  watchSeedAndParticipants();
+                }, 500);
+              }
             }
           }
           updateCountdown();
