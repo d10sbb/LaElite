@@ -1,20 +1,17 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Miembros - Clan La Élite</title>
-  <link rel="icon" href="LogoClan.png" type="image/png" />
+  <link rel="icon" href="LogoClan.png" type="image/png">
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      background-color: #181a1b;
+      background: #181a1b;
       color: #fff;
-      margin: 0;
-      padding: 0;
     }
-
     .top-bar {
       display: flex;
       justify-content: space-between;
@@ -23,124 +20,67 @@
       border-radius: 12px;
       box-shadow: 0 4px 24px #000a;
       padding: 18px 32px;
-      margin: 24px auto;
-      max-width: 900px;
-      flex-wrap: wrap;
+      margin: 24px auto 32px auto;
+      max-width: 800px;
     }
-
-    .top-bar .left,
-    .top-bar .center,
-    .top-bar .right {
+    .top-bar .left, .top-bar .center, .top-bar .right {
       flex: 1;
       display: flex;
       justify-content: center;
-      margin: 6px 0;
     }
-
     .top-bar .left {
       justify-content: flex-start;
     }
-
+    .top-bar .center {
+      justify-content: center;
+    }
     .top-bar .right {
       justify-content: flex-end;
     }
-
     .top-bar button {
       background: #23272a;
       color: #fff;
       border: 1px solid #444;
       border-radius: 6px;
       padding: 12px 28px;
-      font-size: 16px;
+      font-size: 18px;
       font-weight: bold;
       cursor: pointer;
       transition: background 0.2s;
       box-shadow: 0 2px 8px #0004;
       margin: 0 8px;
     }
-
     .top-bar button:hover {
       background: #2c3136;
     }
-
     .main-content {
       background: #23272a;
       border-radius: 12px;
       box-shadow: 0 4px 24px #000a;
-      padding: 40px 16px;
-      margin: 0 auto 40px;
-      max-width: 900px;
+      padding: 40px 0 40px 0;
+      margin: 0 auto;
+      max-width: 800px;
     }
-
     h1 {
+      margin-bottom: 16px;
       font-size: 2.2em;
       color: #00ffae;
       text-shadow: 0 2px 8px #000;
-      margin-bottom: 20px;
     }
-
-    h2 {
-      color: #00ffae;
-      margin-top: 40px;
-      font-size: 1.6em;
+    p {
+      font-size: 1.2em;
+      color: #fff;
+      margin-bottom: 0;
     }
-
-    .grid-section {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 24px;
-      padding: 16px 0;
-      margin-top: 16px;
-      max-width: 180px;
-      width: 100%;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-
-
-    .member-card {
-      background: #1f2224;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 2px 12px #0005;
-    }
-
-    .member-card img {
-      width: 100%;
-      border-radius: 8px;
-      object-fit: cover;
-    }
-
-    .member-card p {
-      margin-top: 12px;
-      font-weight: bold;
-      font-size: 1em;
-    }
-
     @media (max-width: 768px) {
-      .top-bar {
-        flex-direction: column;
-        align-items: stretch;
-      }
-
-      .top-bar .left,
-      .top-bar .center,
-      .top-bar .right {
-        justify-content: center;
-      }
-
-      .top-bar button {
-        width: 100%;
-        max-width: 300px;
-        margin: 6px auto;
+      .main-content div[style*="grid-template-columns"] {
+        grid-template-columns: repeat(2, 1fr) !important;
       }
     }
+
   </style>
 </head>
 <body>
-
-  <!-- Barra superior -->
   <div class="top-bar">
     <div class="left">
       <button onclick="location.href='novedades.html'">Novedades</button>
@@ -152,68 +92,74 @@
       <button onclick="location.href='sorteo.html'">Sorteo mensual</button>
     </div>
   </div>
-
-  <!-- Contenido principal -->
   <div class="main-content">
     <h1>Miembros del clan La Élite</h1>
-
+  
     <!-- Líderes -->
-    <h2><br>LÍDERES</h2>
-    <div class="grid-section">
-      <div class="member-card">
-        <img src="lider1.jpg" alt="Líder 1">
-        <p>Líder</p>
-      </div>
-      <div class="member-card">
-        <img src="lider2.jpg" alt="Líder 2">
-        <p>Colíder</p>
-      </div>
-    </div>
-
-    <!-- Veteranos -->
-    <h2><br>VETERANOS</h2>
-    <div class="grid-section">
-      <div class="member-card">
-        <img src="veterano1.jpg" alt="Veterano">
-        <p>Veterano A</p>
+    <h2 style="color: #00ffae; margin-top: 32px;"><br>LIDERES</h2>
+    <div style="display: flex; justify-content: center;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 24px; padding: 16px 32px; width: 100%; max-width: 700px;">
+        <div style="background: #1f2224; border-radius: 12px; padding: 16px;">
+          <img src="lider1.jpg" alt="Líder 1" style="width: 100%; border-radius: 8px;">
+          <p style="margin-top: 12px; font-weight: bold;">Líder</p>
+        </div>
+        <div style="background: #1f2224; border-radius: 12px; padding: 16px;">
+          <img src="lider2.jpg" alt="Líder 2" style="width: 100%; border-radius: 8px;">
+          <p style="margin-top: 12px; font-weight: bold;">Colider</p>
+        </div>
       </div>
     </div>
-
+  
+    <!-- Veterano -->
+    <h2 style="color: #00ffae; margin-top: 32px;"><br>VETERANOS</h2>
+    <div style="display: flex; justify-content: center;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 24px; padding: 16px 32px; width: 100%; max-width: 700px;">
+        <div style="background: #1f2224; border-radius: 12px; padding: 16px;">
+          <img src="veterano1.jpg" alt="Veterano" style="width: 100%; border-radius: 8px;">
+          <p style="margin-top: 12px; font-weight: bold;">Veterano A</p>
+        </div>
+      </div>
+    </div>
+  
     <!-- Oficiales -->
-    <h2><br>OFICIALES</h2>
-    <div class="grid-section">
-      <div class="member-card">
-        <img src="oficial1.jpg" alt="Oficial 1">
-        <p>Oficial A</p>
-      </div>
-      <div class="member-card">
-        <img src="oficial2.jpg" alt="Oficial 2">
-        <p>Oficial B</p>
-      </div>
-      <div class="member-card">
-        <img src="oficial3.jpg" alt="Oficial 3">
-        <p>Oficial C</p>
-      </div>
-      <div class="member-card">
-        <img src="oficial4.jpg" alt="Oficial 4">
-        <p>Oficial D</p>
-      </div>
-      <div class="member-card">
-        <img src="oficial5.jpg" alt="Oficial 5">
-        <p>Oficial E</p>
+    <h2 style="color: #00ffae; margin-top: 32px;"><br>OFICIALES</h2>
+    <div style="display: flex; justify-content: center;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 24px; padding: 16px 32px; width: 100%; max-width: 700px;">
+        <div style="background: #1f2224; border-radius: 12px; padding: 16px;">
+          <img src="oficial1.jpg" alt="Oficial 1" style="width: 100%; border-radius: 8px;">
+          <p style="margin-top: 12px; font-weight: bold;">Oficial A</p>
+        </div>
+        <div style="background: #1f2224; border-radius: 12px; padding: 16px;">
+          <img src="oficial2.jpg" alt="Oficial 2" style="width: 100%; border-radius: 8px;">
+          <p style="margin-top: 12px; font-weight: bold;">Oficial B</p>
+        </div>
+        <div style="background: #1f2224; border-radius: 12px; padding: 16px;">
+          <img src="oficial3.jpg" alt="Oficial 3" style="width: 100%; border-radius: 8px;">
+          <p style="margin-top: 12px; font-weight: bold;">Oficial C</p>
+        </div>
+        <div style="background: #1f2224; border-radius: 12px; padding: 16px;">
+          <img src="oficial4.jpg" alt="Oficial 4" style="width: 100%; border-radius: 8px;">
+          <p style="margin-top: 12px; font-weight: bold;">Oficial D</p>
+        </div>
+        <div style="background: #1f2224; border-radius: 12px; padding: 16px;">
+          <img src="oficial5.jpg" alt="Oficial 5" style="width: 100%; border-radius: 8px;">
+          <p style="margin-top: 12px; font-weight: bold;">Oficial E</p>
+        </div>
       </div>
     </div>
-
+  
     <!-- Miembros -->
-    <h2><br>MIEMBROS</h2>
-    <div class="grid-section">
-      <div class="member-card">
-        <img src="miembro1.jpg" alt="Miembro 1">
-        <p>Miembro A</p>
-      </div>
-      <div class="member-card">
-        <img src="miembro2.jpg" alt="Miembro 2">
-        <p>Miembro B</p>
+    <h2 style="color: #00ffae; margin-top: 32px;"><br>MIEMBROS</h2>
+    <div style="display: flex; justify-content: center;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 24px; padding: 16px 32px; width: 100%; max-width: 700px;">
+        <div style="background: #1f2224; border-radius: 12px; padding: 16px;">
+          <img src="miembro1.jpg" alt="Miembro 1" style="width: 100%; border-radius: 8px;">
+          <p style="margin-top: 12px; font-weight: bold;">Miembro A</p>
+        </div>
+        <div style="background: #1f2224; border-radius: 12px; padding: 16px;">
+          <img src="miembro2.jpg" alt="Miembro 2" style="width: 100%; border-radius: 8px;">
+          <p style="margin-top: 12px; font-weight: bold;">Miembro B</p>
+        </div>
       </div>
     </div>
   </div>
