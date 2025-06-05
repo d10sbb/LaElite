@@ -6,7 +6,6 @@
   <title>Miembros - Clan La Élite</title>
   <link rel="icon" href="LogoClan.png" type="image/png">
   <style>
-    
     * {
       box-sizing: border-box;
     }
@@ -38,13 +37,8 @@
       justify-content: center;
     }
 
-    .top-bar .left {
-      justify-content: flex-start;
-    }
-
-    .top-bar .right {
-      justify-content: flex-end;
-    }
+    .top-bar .left { justify-content: flex-start; }
+    .top-bar .right { justify-content: flex-end; }
 
     .top-bar button {
       background: #23272a;
@@ -85,10 +79,11 @@
       margin-top: 32px;
     }
 
-    .grid-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    .flex-container {
+      display: flex;
+      flex-wrap: wrap;
       gap: 24px;
+      justify-content: center;
       padding: 16px;
       max-width: 800px;
       margin: 0 auto;
@@ -101,7 +96,18 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
+      flex: 1 1 240px;
+      max-width: 240px;
+    }
+
+    .member-card.single {
+      flex: 1 1 100%;
+      max-width: 100%;
+    }
+
+    .member-card.half {
+      flex: 1 1 calc(50% - 12px);
+      max-width: calc(50% - 12px);
     }
 
     .member-image {
@@ -140,14 +146,14 @@
     <h1>Miembros del clan La Élite</h1>
 
     <!-- Líderes -->
-    <h2><br>LÍDERES</h2>
-    <div class="grid-container">
-      <div class="member-card">
+    <h2>LÍDERES</h2>
+    <div class="flex-container">
+      <div class="member-card half">
         <img src="jugadores/D10S.png" alt="D10S" class="member-image">
         <p><strong>D10S</strong></p>
         <p class="member-date">Se unió al clan el: 01/11/24</p>
       </div>
-      <div class="member-card">
+      <div class="member-card half">
         <img src="jugadores/Cielo.png" alt="Cielo" class="member-image">
         <p><strong>Cielo</strong></p>
         <p class="member-date">Se unió al clan el: 05/12/24</p>
@@ -155,9 +161,9 @@
     </div>
 
     <!-- Veteranos -->
-    <h2><br>VETERANOS</h2>
-    <div class="grid-container">
-      <div class="member-card">
+    <h2>VETERANOS</h2>
+    <div class="flex-container">
+      <div class="member-card single">
         <img src="jugadores/Br0Ke.png" alt="Br0Ke" class="member-image">
         <p><strong>Br0Ke</strong></p>
         <p class="member-date">Se unió al clan el: 06/02/25</p>
@@ -165,8 +171,8 @@
     </div>
 
     <!-- Oficiales -->
-    <h2><br>OFICIALES</h2>
-    <div class="grid-container">
+    <h2>OFICIALES</h2>
+    <div class="flex-container">
       <div class="member-card">
         <img src="jugadores/Metemela.png" alt="Metemela" class="member-image">
         <p><strong>Metemela</strong></p>
@@ -182,12 +188,12 @@
         <p><strong>Martin</strong></p>
         <p class="member-date">Se unió al clan el: 29/04/25</p>
       </div>
-      <div class="member-card">
+      <div class="member-card half">
         <img src="jugadores/MannyOG.png" alt="MannyOG" class="member-image">
         <p><strong>MannyOG</strong></p>
         <p class="member-date">Se unió al clan el: 04/05/25</p>
       </div>
-      <div class="member-card">
+      <div class="member-card half">
         <img src="jugadores/PunxOro.png" alt="PunxOro" class="member-image">
         <p><strong>PunxOro</strong></p>
         <p class="member-date">Se unió al clan el: 16/05/25</p>
@@ -195,15 +201,15 @@
     </div>
 
     <!-- Miembros -->
-    <h2><br>MIEMBROS</h2>
-    <div class="grid-container">
-      <div class="member-card">
+    <h2>MIEMBROS</h2>
+    <div class="flex-container">
+      <div class="member-card half">
         <img src="jugadores/ThreeKings.png" alt="ThreeKings" class="member-image">
         <p><strong>ThreeKings</strong></p>
         <p class="member-date">Se unió al clan el: 19/05/25</p>
       </div>
-      <div class="member-card">
-        <img src="jugadores/???.png" alt="???" class="member-image">
+      <div class="member-card half">
+        <img src="jugadores/???.png" alt="Miembro sin nombre" class="member-image">
         <p><strong>???</strong></p>
         <p class="member-date">Se unió al clan el: ??/06/25</p>
       </div>
