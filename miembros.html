@@ -86,17 +86,11 @@
 
     .grid-container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      grid-template-columns: repeat(3, 1fr); /* Máximo 3 por fila */
       gap: 24px;
-      width: 100%;
+      padding: 16px 16px;
       max-width: 800px;
       margin: 0 auto;
-      padding: 16px 24px;
-      /* ← Aplica padding a todos los lados */
-      /* O si prefieres usar lógica moderna: */
-      /* padding: 16px; */
-      /* O aún mejor y más específico: */
-      /* padding: 16px 24px; */
     }
 
 
@@ -135,6 +129,18 @@
         grid-template-columns: repeat(2, 1fr);
       }
     }
+
+    /* Ajuste específico para estirar tarjetas seleccionadas */
+    .grid-container .wide {
+      grid-column: span 1;
+    }
+
+    @media (max-width: 768px) {
+      .grid-container .wide {
+        grid-column: span 2;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -197,16 +203,12 @@
         <p><strong>Martin</strong></p>
         <p class="member-date">Se unió al clan el: 29/04/25</p>
       </div>
-    </div>
-    <!-- Segunda fila de Oficiales -->
-    <h2> </h2>
-    <div class="grid-container">
-      <div class="member-card">
+      <div class="member-card wide">
         <img src="jugadores/MannyOG.png" alt="MannyOG" class="member-image">
         <p><strong>MannyOG</strong></p>
         <p class="member-date">Se unió al clan el: 04/05/25</p>
       </div>
-      <div class="member-card">
+      <div class="member-card wide">
         <img src="jugadores/PunxOro.png" alt="PunxOro" class="member-image">
         <p><strong>PunxOro</strong></p>
         <p class="member-date">Se unió al clan el: 16/05/25</p>
