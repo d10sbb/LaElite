@@ -9,7 +9,7 @@
     * {
       box-sizing: border-box;
     }
-    
+
     body {
       font-family: Arial, sans-serif;
       text-align: center;
@@ -86,14 +86,12 @@
 
     .grid-container {
       display: grid;
-      grid-template-columns: repeat(3, 1fr); /* Máximo 3 por fila */
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 24px;
-      padding: 16px 16px;
+      padding: 16px;
       max-width: 800px;
       margin: 0 auto;
     }
-
-
 
     .member-card {
       background: #1f2224;
@@ -103,9 +101,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      height: 180px;
     }
-    
 
     .member-image {
       width: 100%;
@@ -123,25 +119,6 @@
       font-size: 0.85em;
       color: #ccc;
     }
-
-    @media (max-width: 768px) {
-      .grid-container {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    /* Ajuste específico para estirar tarjetas seleccionadas */
-    .grid-container .wide {
-      grid-column: span 3;
-    }
-    
-    @media (max-width: 768px) {
-      .grid-container .wide {
-        grid-column: span 2;
-      }
-    }
-
-
   </style>
 </head>
 <body>
@@ -167,12 +144,12 @@
       <div class="member-card">
         <img src="jugadores/D10S.png" alt="D10S" class="member-image">
         <p><strong>D10S</strong></p>
-        <p class="member-date">Se unió al clan el: 01/11/24<br></p>
+        <p class="member-date">Se unió al clan el: 01/11/24</p>
       </div>
       <div class="member-card">
         <img src="jugadores/Cielo.png" alt="Cielo" class="member-image">
         <p><strong>Cielo</strong></p>
-        <p class="member-date">Se unió al clan el: 05/12/24<br></p>
+        <p class="member-date">Se unió al clan el: 05/12/24</p>
       </div>
     </div>
 
@@ -204,12 +181,12 @@
         <p><strong>Martin</strong></p>
         <p class="member-date">Se unió al clan el: 29/04/25</p>
       </div>
-      <div class="member-card wide">
+      <div class="member-card">
         <img src="jugadores/MannyOG.png" alt="MannyOG" class="member-image">
         <p><strong>MannyOG</strong></p>
         <p class="member-date">Se unió al clan el: 04/05/25</p>
       </div>
-      <div class="member-card wide">
+      <div class="member-card">
         <img src="jugadores/PunxOro.png" alt="PunxOro" class="member-image">
         <p><strong>PunxOro</strong></p>
         <p class="member-date">Se unió al clan el: 16/05/25</p>
@@ -225,12 +202,12 @@
         <p class="member-date">Se unió al clan el: 19/05/25</p>
       </div>
       <div class="member-card">
-        <img src="jugadores/LaHuerta.png" alt="LaHuerta." class="member-image">
-        <p><strong>LaHuerta.</strong></p>
-        <p class="member-date">Se unió al clan el: 04/06/25</p>
+        <img src="jugadores/???.png" alt="???" class="member-image">
+        <p><strong>???</strong></p>
+        <p class="member-date">Se unió al clan el: ??/06/25</p>
       </div>
     </div>
-
   </div>
+
 </body>
 </html>
