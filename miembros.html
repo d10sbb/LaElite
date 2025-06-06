@@ -98,6 +98,11 @@
       align-items: center;
       flex: 1 1 240px;
       max-width: 240px;
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+
+    .member-card:hover {
+      box-shadow: 0 0 12px #00ffaecc, 0 0 24px #00ffae88;
     }
 
     .member-card.single {
@@ -115,6 +120,11 @@
       max-height: 110px;
       object-fit: contain;
       border-radius: 8px;
+      transition: transform 0.3s ease;
+    }
+
+    .member-card:hover .member-image {
+      transform: scale(1.1);
     }
 
     p {
