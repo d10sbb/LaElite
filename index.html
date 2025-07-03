@@ -47,6 +47,28 @@
         .boton-home:hover {
             background: #2c3136;
         }
+
+        .image-box {
+          max-width: 800px;
+          margin: 40px auto 0 auto;
+          background: #23272a;
+          border-radius: 10px;
+          box-shadow: 0 2px 12px #0006;
+          aspect-ratio: 1 / 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        
+        .image-box img {
+          max-width: 100%;
+          max-height: 100%;
+          border-radius: 8px;
+          box-shadow: 0 2px 8px #0008;
+          object-fit: contain;
+        }
+
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js"></script>
