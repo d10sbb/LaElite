@@ -48,26 +48,27 @@
             background: #2c3136;
         }
 
-        .image-box {
-          max-width: 800px;
-          margin: 40px auto 0 auto;
+        .image-inner-box {
           background: #23272a;
           border-radius: 10px;
+          padding: 10px;
           box-shadow: 0 2px 12px #0006;
+          width: 100%;
           aspect-ratio: 1 / 1;
           display: flex;
           align-items: center;
           justify-content: center;
-          overflow: hidden;
+          box-sizing: border-box;
         }
         
-        .image-box img {
+        .image-inner-box img {
           max-width: 100%;
           max-height: 100%;
+          object-fit: contain;
           border-radius: 8px;
           box-shadow: 0 2px 8px #0008;
-          object-fit: contain;
         }
+
 
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
@@ -79,9 +80,14 @@
         <p id="winnerDisplay">Clan TOP 1 de <a href="https://www.boombang.tv">BoomBang</a></p>
         <button class="boton-home" onclick="location.href='home.html'">Ir a la página principal del clan</button>
     </div>
-    <div class="image-box">
-        <img src="LaEliteLogoChatGPT.png" alt="Logo del Clan">
+    <!-- Contenedor externo igual que .main-content -->
+    <div class="main-content">
+      <!-- Contenedor interno para la imagen con estilo de panel -->
+      <div class="image-inner-box">
+        <img src="aEliteLogoChatGPT.png" alt="Logo del clan La Élite">
+      </div>
     </div>
+
     <script>
         // Configuración de Firebase
         const firebaseConfig = {
